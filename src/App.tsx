@@ -20,7 +20,7 @@ export default function App() {
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        fetchProfile(session.user.id);
+        fetchProfile(session);
       } else {
         setLoading(false);
       }
@@ -29,7 +29,7 @@ export default function App() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        fetchProfile(session.user.id);
+        fetchProfile(session);
       } else {
         setCurrentUser(null);
         setLoading(false);
@@ -39,16 +39,36 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (session: any) => {
     try {
+      const userId = session.user.id;
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (error) throw error;
-      if (data) {
+      // PGRST116 means no rows returned (user doesn't exist in public.users yet)
+      if (error && error.code === 'PGRST116') {
+        const newUser = {
+          id: userId,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuario',
+          email: session.user.email,
+          role: session.user.user_metadata?.role || 'doctor',
+          ...(session.user.user_metadata?.role === 'doctor' ? { rating: 5.0, completion_rate: 100 } : {})
+        };
+        
+        const { data: insertedData, error: insertError } = await supabase
+          .from('users')
+          .insert([newUser])
+          .select()
+          .single();
+          
+        if (insertError) throw insertError;
+        setCurrentUser(insertedData as User);
+      } else if (error) {
+        throw error;
+      } else if (data) {
         setCurrentUser(data as User);
       }
     } catch (error) {
