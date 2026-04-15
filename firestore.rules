@@ -1,0 +1,159 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - name: string (required, < 100 chars)
+    //   - role: string (required, 'doctor' or 'clinic')
+    //   - email: string (required, valid email)
+    //   - specialty: string (optional, < 100 chars)
+    //   - rating: number (optional, >= 0, <= 5)
+    //   - completionRate: number (optional, >= 0, <= 100)
+    //   - address: string (optional, < 200 chars)
+    //
+    // Collection: shifts
+    // Document ID: {shiftId}
+    // Fields:
+    //   - clinicId: string (required, matches creator UID)
+    //   - clinicName: string (required, < 100 chars)
+    //   - category: string (required, 'guardia' or 'evento')
+    //   - type: string (required, < 100 chars)
+    //   - specialty: string (required, < 100 chars)
+    //   - date: string (required, ISO date string)
+    //   - startTime: string (required, < 10 chars)
+    //   - endTime: string (required, < 10 chars)
+    //   - location: string (required, < 200 chars)
+    //   - zone: string (optional, < 100 chars)
+    //   - requirements: list of strings (optional, max 20 items, each < 100 chars)
+    //   - equipmentAvailable: list of strings (optional, max 20 items, each < 100 chars)
+    //   - contactPerson: string (optional, < 100 chars)
+    //   - price: number (required, >= 0)
+    //   - status: string (required, 'open', 'confirmed', 'completed', 'cancelled')
+    //   - applicants: list of strings (required, max 100 items)
+    //   - assignedDoctorId: string (optional)
+    //   - attendanceConfirmed: boolean (optional)
+    //   - createdAt: string (required, ISO date string)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.size() >= 10 && dateStr.size() <= 30;
+    }
+    
+    function isClinic() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'clinic';
+    }
+
+    function isDoctor() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'role', 'email']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.role in ['doctor', 'clinic'] &&
+             isValidEmail(data.email) &&
+             (!('specialty' in data) || (data.specialty is string && data.specialty.size() < 100)) &&
+             (!('rating' in data) || (data.rating is number && data.rating >= 0 && data.rating <= 5)) &&
+             (!('completionRate' in data) || (data.completionRate is number && data.completionRate >= 0 && data.completionRate <= 100)) &&
+             (!('address' in data) || (data.address is string && data.address.size() < 200));
+    }
+
+    function isValidShift(data) {
+      return data.keys().hasAll(['clinicId', 'clinicName', 'category', 'type', 'specialty', 'date', 'startTime', 'endTime', 'location', 'price', 'status', 'applicants', 'createdAt']) &&
+             data.clinicId is string && data.clinicId == request.auth.uid &&
+             data.clinicName is string && data.clinicName.size() > 0 && data.clinicName.size() < 100 &&
+             data.category in ['guardia', 'evento'] &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 100 &&
+             data.specialty is string && data.specialty.size() > 0 && data.specialty.size() < 100 &&
+             isValidDateString(data.date) &&
+             data.startTime is string && data.startTime.size() <= 10 &&
+             data.endTime is string && data.endTime.size() <= 10 &&
+             data.location is string && data.location.size() > 0 && data.location.size() < 200 &&
+             (!('zone' in data) || (data.zone is string && data.zone.size() < 100)) &&
+             (!('requirements' in data) || (data.requirements is list && data.requirements.size() <= 20)) &&
+             (!('equipmentAvailable' in data) || (data.equipmentAvailable is list && data.equipmentAvailable.size() <= 20)) &&
+             (!('contactPerson' in data) || (data.contactPerson is string && data.contactPerson.size() < 100)) &&
+             data.price is number && data.price >= 0 &&
+             data.status in ['open', 'confirmed', 'completed', 'cancelled'] &&
+             data.applicants is list && data.applicants.size() <= 100 &&
+             (!('assignedDoctorId' in data) || data.assignedDoctorId is string) &&
+             (!('attendanceConfirmed' in data) || data.attendanceConfirmed is bool) &&
+             isValidDateString(data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (needed for matching)
+      allow read: if isAuthenticated();
+      
+      // Users can create their own profile
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      // Users can update their own profile
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /shifts/{shiftId} {
+      // Anyone authenticated can read shifts
+      allow read: if isAuthenticated();
+      
+      // Only clinics can create shifts, and they must be the owner
+      allow create: if isClinic() && isValidShift(request.resource.data);
+      
+      // Updates are allowed in specific scenarios
+      allow update: if isAuthenticated() && (
+        // Scenario 1: Clinic updates their own shift
+        (resource.data.clinicId == request.auth.uid && 
+         isValidShift(request.resource.data) && 
+         request.resource.data.clinicId == resource.data.clinicId) ||
+         
+        // Scenario 2: Doctor applies to a shift (only modifies applicants array)
+        (isDoctor() && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['applicants']) &&
+         request.resource.data.applicants.size() == resource.data.applicants.size() + 1 &&
+         request.auth.uid in request.resource.data.applicants &&
+         !(request.auth.uid in resource.data.applicants)) ||
+         
+        // Scenario 3: Assigned doctor confirms attendance
+        (isDoctor() &&
+         resource.data.assignedDoctorId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendanceConfirmed']) &&
+         request.resource.data.attendanceConfirmed == true)
+      );
+      
+      // Clinics can delete their own shifts
+      allow delete: if isAuthenticated() && resource.data.clinicId == request.auth.uid;
+    }
+  }
+}

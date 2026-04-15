@@ -1,0 +1,155 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the platform, either a doctor or a clinic/organizer.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the user or clinic"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["doctor", "clinic"],
+          "description": "Role of the user"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address"
+        },
+        "specialty": {
+          "type": "string",
+          "description": "Doctor's specialty (if doctor)"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Doctor's rating (if doctor)"
+        },
+        "completionRate": {
+          "type": "number",
+          "description": "Doctor's completion rate (if doctor)"
+        },
+        "address": {
+          "type": "string",
+          "description": "Clinic's address (if clinic)"
+        }
+      },
+      "required": ["name", "role", "email"]
+    },
+    "Shift": {
+      "title": "Shift",
+      "description": "A medical shift or event opportunity.",
+      "type": "object",
+      "properties": {
+        "clinicId": {
+          "type": "string",
+          "description": "UID of the clinic that created the shift"
+        },
+        "clinicName": {
+          "type": "string",
+          "description": "Name of the clinic"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["guardia", "evento"],
+          "description": "Category of the opportunity"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type or brief description"
+        },
+        "specialty": {
+          "type": "string",
+          "description": "Required specialty or role"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the shift (ISO string)"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Start time (HH:mm)"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "End time (HH:mm)"
+        },
+        "location": {
+          "type": "string",
+          "description": "Exact location"
+        },
+        "zone": {
+          "type": "string",
+          "description": "Geographical zone"
+        },
+        "requirements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of requirements"
+        },
+        "equipmentAvailable": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of available equipment"
+        },
+        "contactPerson": {
+          "type": "string",
+          "description": "Contact person name"
+        },
+        "price": {
+          "type": "number",
+          "description": "Price / Honorarios"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "confirmed", "completed", "cancelled"],
+          "description": "Status of the shift"
+        },
+        "applicants": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of doctor UIDs who applied"
+        },
+        "assignedDoctorId": {
+          "type": "string",
+          "description": "UID of the assigned doctor"
+        },
+        "attendanceConfirmed": {
+          "type": "boolean",
+          "description": "Whether the doctor confirmed attendance 24hs before"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp (ISO string)"
+        }
+      },
+      "required": [
+        "clinicId",
+        "clinicName",
+        "category",
+        "type",
+        "specialty",
+        "date",
+        "startTime",
+        "endTime",
+        "location",
+        "price",
+        "status",
+        "applicants",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles (doctors and clinics)"
+    },
+    "/shifts/{shiftId}": {
+      "schema": { "$ref": "#/entities/Shift" },
+      "description": "Stores shifts and events"
+    }
+  }
+}
