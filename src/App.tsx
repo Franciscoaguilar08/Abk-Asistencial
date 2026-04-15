@@ -5,9 +5,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { User } from './types';
 import Landing from './pages/Landing';
 import DoctorDashboard from './pages/DoctorDashboard';
@@ -19,30 +17,49 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Check if user exists in Firestore
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          setCurrentUser(userDoc.data() as User);
-        } else {
-          // If user doesn't exist in DB yet, they are in the middle of registration
-          // We'll handle this in the Landing page
-          setCurrentUser(null);
-        }
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        fetchProfile(session.user.id);
       } else {
-        setCurrentUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        fetchProfile(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) throw error;
+      if (data) {
+        setCurrentUser(data as User);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
     setCurrentUser(null);
   };
 
@@ -53,6 +70,11 @@ export default function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+        {!isSupabaseConfigured && (
+          <div className="bg-yellow-50 border-b border-yellow-200 p-4 text-center text-yellow-800 text-sm">
+            <strong>Atención:</strong> Las variables de entorno de Supabase no están configuradas. La aplicación no funcionará correctamente hasta que agregues <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>.
+          </div>
+        )}
         <Navbar currentUser={currentUser} onLogout={logout} />
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Routes>

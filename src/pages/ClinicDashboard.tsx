@@ -1,6 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { collection, query, onSnapshot, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -17,54 +16,56 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'shifts'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const shiftsData: Shift[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data() as Shift;
-        if (data.clinicId === user.id) {
-          shiftsData.push({ id: doc.id, ...data });
-        }
-      });
-      // Sort by date descending
-      shiftsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setShifts(shiftsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching shifts:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    fetchShifts();
   }, [user.id]);
+
+  const fetchShifts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('clinic_id', user.id)
+        .order('date', { ascending: false });
+        
+      if (error) throw error;
+      setShifts(data as Shift[]);
+    } catch (error) {
+      console.error("Error fetching shifts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateShift = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const newShift: Omit<Shift, 'id'> = {
-      clinicId: user.id,
-      clinicName: user.name,
+    const newShift = {
+      clinic_id: user.id,
+      clinic_name: user.name,
       category: formData.get('category') as 'guardia' | 'evento',
       specialty: formData.get('specialty') as string,
       type: formData.get('type') as string,
       price: Number(formData.get('price')),
-      date: new Date(formData.get('date') as string).toISOString(),
-      startTime: formData.get('startTime') as string,
-      endTime: formData.get('endTime') as string,
+      date: new Date(formData.get('date') as string).toISOString().split('T')[0],
+      start_time: formData.get('startTime') as string,
+      end_time: formData.get('endTime') as string,
       zone: formData.get('zone') as string,
       location: formData.get('location') as string,
       requirements: (formData.get('requirements') as string).split(',').map(s => s.trim()).filter(Boolean),
+      equipment_available: (formData.get('equipmentAvailable') as string)?.split(',').map(s => s.trim()).filter(Boolean) || [],
+      contact_person: formData.get('contactPerson') as string || null,
       status: 'open',
-      applicants: [],
-      createdAt: new Date().toISOString()
+      applicants: []
     };
 
     try {
-      const newShiftRef = doc(collection(db, 'shifts'));
-      await setDoc(newShiftRef, newShift);
+      const { error } = await supabase.from('shifts').insert([newShift]);
+      if (error) throw error;
+      
       setIsModalOpen(false);
       alert('Oportunidad publicada exitosamente');
+      fetchShifts();
     } catch (error) {
       console.error("Error creating shift:", error);
       alert("Error al publicar la oportunidad.");
@@ -73,12 +74,18 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
 
   const handleAssign = async (shiftId: string, doctorId: string) => {
     try {
-      const shiftRef = doc(db, 'shifts', shiftId);
-      await updateDoc(shiftRef, {
-        assignedDoctorId: doctorId,
-        status: 'confirmed'
-      });
+      const { error } = await supabase
+        .from('shifts')
+        .update({
+          assigned_doctor_id: doctorId,
+          status: 'confirmed'
+        })
+        .eq('id', shiftId);
+        
+      if (error) throw error;
+      
       alert('Médico asignado exitosamente');
+      fetchShifts();
     } catch (error) {
       console.error("Error assigning doctor:", error);
       alert("Error al asignar médico.");
@@ -233,27 +240,31 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (shift.assignedDoctorId) {
-        const docRef = doc(db, 'users', shift.assignedDoctorId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setAssignedDoctor(docSnap.data() as User);
+      if (shift.assigned_doctor_id) {
+        const { data } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', shift.assigned_doctor_id)
+          .single();
+        if (data) {
+          setAssignedDoctor(data as User);
         }
       }
 
-      if (shift.applicants.length > 0) {
-        const applicantPromises = shift.applicants.map(async (uid) => {
-          const docRef = doc(db, 'users', uid);
-          const docSnap = await getDoc(docRef);
-          return docSnap.exists() ? (docSnap.data() as User) : null;
-        });
-        const results = await Promise.all(applicantPromises);
-        setApplicants(results.filter(Boolean) as User[]);
+      if (shift.applicants && shift.applicants.length > 0) {
+        const { data } = await supabase
+          .from('users')
+          .select('*')
+          .in('id', shift.applicants);
+        
+        if (data) {
+          setApplicants(data as User[]);
+        }
       }
     };
 
     fetchUsers();
-  }, [shift.assignedDoctorId, shift.applicants]);
+  }, [shift.assigned_doctor_id, shift.applicants]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:flex-row">
@@ -287,7 +298,7 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
           </div>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-400" />
-            <span>{shift.startTime} - {shift.endTime}</span>
+            <span>{shift.start_time} - {shift.end_time}</span>
           </div>
           <div className="flex items-start gap-2 col-span-2">
             <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
@@ -308,10 +319,10 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
             <DollarSign className="w-4 h-4 text-green-600" />
             <span>${shift.price.toLocaleString('es-AR')}</span>
           </div>
-          {shift.contactPerson && (
+          {shift.contact_person && (
             <div className="flex items-center gap-2 col-span-2 pt-1">
               <UserCircle className="w-4 h-4 text-gray-400" />
-              <span>Contacto: {shift.contactPerson}</span>
+              <span>Contacto: {shift.contact_person}</span>
             </div>
           )}
         </div>
@@ -337,10 +348,10 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
                   <div className="flex items-center gap-1 text-sm text-yellow-600">
                     ★ {assignedDoctor.rating}
                   </div>
-                  {assignedDoctor.completionRate && (
+                  {assignedDoctor.completion_rate && (
                     <div className="flex items-center gap-1 text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
                       <Activity className="w-3 h-3" />
-                      {assignedDoctor.completionRate}% Asistencia
+                      {assignedDoctor.completion_rate}% Asistencia
                     </div>
                   )}
                 </div>
@@ -353,7 +364,7 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Confirmación 24hs:</span>
-                  {shift.attendanceConfirmed ? (
+                  {shift.attendance_confirmed ? (
                     <span className="text-green-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Confirmado</span>
                   ) : (
                     <span className="text-yellow-600 font-medium">Pendiente</span>
@@ -376,9 +387,9 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
                       <div className="flex items-center gap-1 text-xs text-yellow-600">
                         ★ {applicant.rating}
                       </div>
-                      {applicant.completionRate && (
+                      {applicant.completion_rate && (
                         <div className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded-full">
-                          {applicant.completionRate}% Asistencia
+                          {applicant.completion_rate}% Asistencia
                         </div>
                       )}
                     </div>

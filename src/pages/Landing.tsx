@@ -1,8 +1,6 @@
-import { ArrowRight, Stethoscope, Building2, Clock, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowRight, Stethoscope, Building2, Clock, ShieldCheck, Zap, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../firebase';
+import { supabase } from '../lib/supabase';
 import { User } from '../types';
 
 interface LandingProps {
@@ -10,37 +8,32 @@ interface LandingProps {
 }
 
 export default function Landing({ onLoginSuccess }: LandingProps) {
-  const [isRegistering, setIsRegistering] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'doctor' | 'clinic' | null>(null);
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  const handleGoogleLogin = async (role: 'doctor' | 'clinic') => {
+  const handleMagicLinkLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRole || !email) return;
+
     try {
       setLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          data: {
+            role: selectedRole,
+            name: email.split('@')[0] // Default name
+          }
+        }
+      });
 
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        // User already exists, log them in
-        onLoginSuccess(userDoc.data() as User);
-      } else {
-        // New user, create profile
-        const newUser: User = {
-          id: user.uid,
-          name: user.displayName || 'Usuario',
-          email: user.email || '',
-          role: role,
-          ...(role === 'doctor' ? { rating: 5.0, completionRate: 100 } : {})
-        };
-        await setDoc(userDocRef, newUser);
-        onLoginSuccess(newUser);
-      }
+      if (error) throw error;
+      setEmailSent(true);
     } catch (error) {
-      console.error("Error signing in with Google", error);
-      alert("Error al iniciar sesión. Por favor intenta nuevamente.");
+      console.error("Error sending magic link", error);
+      alert("Error al enviar el link. Por favor intenta nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -68,22 +61,69 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-          <button 
-            onClick={() => handleGoogleLogin('doctor')}
-            disabled={loading}
-            className="group flex items-center justify-center gap-2 px-8 py-4 bg-white border-2 border-gray-200 text-gray-900 rounded-xl font-semibold hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
-          >
-            <Stethoscope className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
-            Ingresar como Médico
-          </button>
-          <button 
-            onClick={() => handleGoogleLogin('clinic')}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50"
-          >
-            <Building2 className="w-5 h-5" />
-            Ingresar como Institución / Organizador
-          </button>
+          {!selectedRole ? (
+            <>
+              <button 
+                onClick={() => setSelectedRole('doctor')}
+                className="group flex items-center justify-center gap-2 px-8 py-4 bg-white border-2 border-gray-200 text-gray-900 rounded-xl font-semibold hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm hover:shadow-md"
+              >
+                <Stethoscope className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                Ingresar como Médico
+              </button>
+              <button 
+                onClick={() => setSelectedRole('clinic')}
+                className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+              >
+                <Building2 className="w-5 h-5" />
+                Ingresar como Institución / Organizador
+              </button>
+            </>
+          ) : emailSent ? (
+            <div className="bg-green-50 text-green-800 p-6 rounded-xl border border-green-200 max-w-md mx-auto">
+              <Mail className="w-8 h-8 mx-auto mb-3 text-green-600" />
+              <h3 className="font-bold text-lg mb-2">¡Revisa tu correo!</h3>
+              <p>Te enviamos un link mágico a <strong>{email}</strong> para iniciar sesión sin contraseña.</p>
+              <button 
+                onClick={() => {setEmailSent(false); setSelectedRole(null)}}
+                className="mt-4 text-sm text-green-700 underline"
+              >
+                Volver
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleMagicLinkLogin} className="w-full max-w-md mx-auto bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+              <h3 className="text-lg font-bold mb-4 text-gray-900">
+                Ingresar como {selectedRole === 'doctor' ? 'Médico' : 'Institución'}
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Correo electrónico</label>
+                  <input 
+                    type="email" 
+                    required 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@correo.com" 
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md disabled:opacity-50"
+                >
+                  {loading ? 'Enviando...' : 'Enviar Link Mágico'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setSelectedRole(null)}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Cambiar rol
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </section>
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '../firebase';
+import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -20,24 +19,27 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'shifts'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const shiftsData: Shift[] = [];
-      snapshot.forEach((doc) => {
-        shiftsData.push({ id: doc.id, ...doc.data() } as Shift);
-      });
-      setShifts(shiftsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching shifts:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    fetchShifts();
   }, []);
+
+  const fetchShifts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('*')
+        .order('date', { ascending: true });
+      
+      if (error) throw error;
+      setShifts(data as Shift[]);
+    } catch (error) {
+      console.error("Error fetching shifts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const availableShifts = shifts.filter(s => s.status === 'open' && !s.applicants.includes(user.id));
-  const myShifts = shifts.filter(s => s.applicants.includes(user.id) || s.assignedDoctorId === user.id);
+  const myShifts = shifts.filter(s => s.applicants.includes(user.id) || s.assigned_doctor_id === user.id);
 
   // Extract unique zones and specialties for the filters
   const availableZones = ['Todas', ...Array.from(new Set(shifts.map(s => s.zone).filter(Boolean)))];
@@ -52,11 +54,20 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
 
   const handleApply = async (shiftId: string) => {
     try {
-      const shiftRef = doc(db, 'shifts', shiftId);
-      await updateDoc(shiftRef, {
-        applicants: arrayUnion(user.id)
-      });
+      const shift = shifts.find(s => s.id === shiftId);
+      if (!shift) return;
+
+      const newApplicants = [...shift.applicants, user.id];
+      
+      const { error } = await supabase
+        .from('shifts')
+        .update({ applicants: newApplicants })
+        .eq('id', shiftId);
+        
+      if (error) throw error;
+      
       alert(`Has aplicado a la guardia exitosamente.`);
+      fetchShifts(); // Refresh data
     } catch (error) {
       console.error("Error applying to shift:", error);
       alert("Error al aplicar a la guardia.");
@@ -158,7 +169,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
 }
 
 function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onApply?: () => void, isMyShift?: boolean, userId?: string }) {
-  const isAssigned = shift.assignedDoctorId === userId;
+  const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
   
   const shiftDate = new Date(shift.date);
@@ -166,10 +177,12 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
 
   const handleConfirmAttendance = async () => {
     try {
-      const shiftRef = doc(db, 'shifts', shift.id);
-      await updateDoc(shiftRef, {
-        attendanceConfirmed: true
-      });
+      const { error } = await supabase
+        .from('shifts')
+        .update({ attendance_confirmed: true })
+        .eq('id', shift.id);
+        
+      if (error) throw error;
       alert("✅ Asistencia confirmada. Gracias por avisar con antelación.");
     } catch (error) {
       console.error("Error confirming attendance:", error);
@@ -194,7 +207,7 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
                 {shift.category === 'evento' ? 'Evento' : 'Guardia Clínica'}
               </span>
             </div>
-            <h3 className="font-bold text-lg text-gray-900 leading-tight">{shift.clinicName}</h3>
+            <h3 className="font-bold text-lg text-gray-900 leading-tight">{shift.clinic_name}</h3>
             <p className="text-sm font-medium text-gray-600">{shift.specialty}</p>
           </div>
           {isMyShift && (
@@ -214,7 +227,7 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
           </div>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-400" />
-            <span>{shift.startTime} - {shift.endTime} ({shift.type})</span>
+            <span>{shift.start_time} - {shift.end_time} ({shift.type})</span>
           </div>
           <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
@@ -249,11 +262,11 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
             </div>
           </div>
         )}
-        {shift.equipmentAvailable && shift.equipmentAvailable.length > 0 && (
+        {shift.equipment_available && shift.equipment_available.length > 0 && (
           <div className="pt-2 border-t border-gray-100">
             <p className="text-xs text-gray-500 mb-2">Equipamiento:</p>
             <div className="flex flex-wrap gap-1">
-              {shift.equipmentAvailable.map((eq, i) => (
+              {shift.equipment_available.map((eq, i) => (
                 <span key={i} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
                   {eq}
                 </span>
@@ -261,10 +274,10 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
             </div>
           </div>
         )}
-        {shift.contactPerson && (
+        {shift.contact_person && (
           <div className="pt-2 border-t border-gray-100 flex items-center gap-2 text-sm text-gray-600">
             <UserCircle className="w-4 h-4 text-gray-400" />
-            <span>Contacto: {shift.contactPerson}</span>
+            <span>Contacto: {shift.contact_person}</span>
           </div>
         )}
       </div>
@@ -304,7 +317,7 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
                   Sincronizar Calendario
                 </button>
 
-                {isShiftTomorrow && !shift.attendanceConfirmed && (
+                {isShiftTomorrow && !shift.attendance_confirmed && (
                   <button 
                     onClick={handleConfirmAttendance}
                     className="w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 shadow-sm"
