@@ -11,6 +11,7 @@ import { User } from './types';
 import Landing from './pages/Landing';
 import DoctorDashboard from './pages/DoctorDashboard';
 import ClinicDashboard from './pages/ClinicDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import Navbar from './components/Navbar';
 
 export default function App() {
@@ -129,6 +130,10 @@ export default function App() {
                   <Navigate to="/" replace />
                 )
               } 
+            />
+            <Route 
+              path="/admin" 
+              element={<AdminDashboard currentUser={currentUser} />} 
             />
           </Routes>
         </main>

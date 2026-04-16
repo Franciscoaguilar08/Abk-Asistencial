@@ -74,6 +74,28 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
     }
   };
 
+  const handleWithdraw = async (shiftId: string) => {
+    try {
+      const shift = shifts.find(s => s.id === shiftId);
+      if (!shift) return;
+
+      const newApplicants = shift.applicants.filter(id => id !== user.id);
+
+      const { error } = await supabase
+        .from('shifts')
+        .update({ applicants: newApplicants })
+        .eq('id', shiftId);
+
+      if (error) throw error;
+      
+      toast.success('Has retirado tu postulación exitosamente.');
+      fetchShifts();
+    } catch (error) {
+      console.error("Error withdrawing from shift:", error);
+      toast.error("Error al retirar la postulación.");
+    }
+  };
+
   if (loading) {
     return <div className="py-12 text-center text-gray-500">Cargando oportunidades...</div>;
   }
@@ -153,7 +175,13 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         ) : (
           myShifts.length > 0 ? (
             myShifts.map(shift => (
-              <ShiftCard key={shift.id} shift={shift} isMyShift userId={user.id} />
+              <ShiftCard 
+                key={shift.id} 
+                shift={shift} 
+                isMyShift 
+                userId={user.id} 
+                onWithdraw={() => handleWithdraw(shift.id)}
+              />
             ))
           ) : (
             <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200 border-dashed">
@@ -168,7 +196,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   );
 }
 
-function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onApply?: () => void, isMyShift?: boolean, userId?: string }) {
+function ShiftCard({ shift, onApply, onWithdraw, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, isMyShift?: boolean, userId?: string }) {
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
   
@@ -316,6 +344,15 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
                 </div>
               )}
             </div>
+
+            {isPending && onWithdraw && (
+              <button 
+                onClick={onWithdraw}
+                className="mt-2 w-full py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                Retirar postulación
+              </button>
+            )}
 
             {/* Automation & Assurance Actions */}
             {isAssigned && (

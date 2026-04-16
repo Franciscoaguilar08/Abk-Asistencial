@@ -12,10 +12,15 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleMagicLinkLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRole || !email) return;
+    if (!acceptedTerms) {
+      alert("Debes aceptar los términos y condiciones para continuar.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -107,9 +112,23 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                
+                <div className="flex items-start gap-2 text-left">
+                  <input 
+                    type="checkbox" 
+                    id="terms" 
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <label htmlFor="terms" className="text-xs text-gray-600 leading-tight">
+                    Acepto que ABK Asistencial solo conecta a profesionales con instituciones y no es responsable de honorarios, contratación ni mala praxis.
+                  </label>
+                </div>
+
                 <button 
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !acceptedTerms}
                   className="w-full flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md disabled:opacity-50"
                 >
                   {loading ? 'Enviando...' : 'Enviar Link Mágico'}

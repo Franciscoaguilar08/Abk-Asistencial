@@ -93,6 +93,23 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     }
   };
 
+  const handleCancel = async (shiftId: string) => {
+    try {
+        const { error } = await supabase
+            .from('shifts')
+            .update({ status: 'cancelled' })
+            .eq('id', shiftId);
+
+        if (error) throw error;
+        
+        toast.success('Publicación eliminada exitosamente');
+        fetchShifts();
+    } catch (error) {
+        console.error("Error cancelling shift:", error);
+        toast.error("Error al eliminar la publicación.");
+    }
+  };
+
   if (loading) {
     return <div className="py-12 text-center text-gray-500">Cargando panel...</div>;
   }
@@ -117,7 +134,12 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       <div className="grid gap-6">
         {shifts.length > 0 ? (
           shifts.map(shift => (
-            <ClinicShiftCard key={shift.id} shift={shift} onAssign={handleAssign} />
+            <ClinicShiftCard 
+              key={shift.id} 
+              shift={shift} 
+              onAssign={handleAssign} 
+              onCancel={() => handleCancel(shift.id)}
+            />
           ))
         ) : (
           <div className="py-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200 border-dashed">
@@ -235,9 +257,12 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   );
 }
 
-function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void }) {
+function ClinicShiftCard({ shift, onAssign, onCancel }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void }) {
   const isConfirmed = shift.status === 'confirmed' || shift.status === 'completed';
+  const isCancelled = shift.status === 'cancelled';
   const [assignedDoctor, setAssignedDoctor] = useState<User | null>(null);
+
+  if (isCancelled) return null; // Or render a cancelled state if preferred
   const [applicants, setApplicants] = useState<User[]>([]);
 
   useEffect(() => {
@@ -291,6 +316,15 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
             <h3 className="font-bold text-xl text-gray-900">{shift.specialty}</h3>
             <p className="text-gray-600">{shift.type}</p>
           </div>
+          {!isConfirmed && (
+            <button 
+                onClick={onCancel}
+                className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                title="Eliminar Guardia"
+            >
+                <XCircle className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-600">
