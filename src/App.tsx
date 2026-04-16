@@ -5,6 +5,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { Toaster } from 'sonner';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { User } from './types';
 import Landing from './pages/Landing';
@@ -90,6 +91,7 @@ export default function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+        <Toaster position="top-center" richColors />
         {!isSupabaseConfigured && (
           <div className="bg-yellow-50 border-b border-yellow-200 p-4 text-center text-yellow-800 text-sm">
             <strong>Atención:</strong> Las variables de entorno de Supabase no están configuradas. La aplicación no funcionará correctamente hasta que agregues <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>.

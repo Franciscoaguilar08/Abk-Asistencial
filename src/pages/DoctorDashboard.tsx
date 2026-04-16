@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
-import { format } from 'date-fns';
+import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink } from 'lucide-react';
-import { isToday, isTomorrow } from 'date-fns';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 interface DoctorDashboardProps {
@@ -66,11 +66,11 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         
       if (error) throw error;
       
-      alert(`Has aplicado a la guardia exitosamente.`);
+      toast.success(`Has aplicado a la guardia exitosamente.`);
       fetchShifts(); // Refresh data
     } catch (error) {
       console.error("Error applying to shift:", error);
-      alert("Error al aplicar a la guardia.");
+      toast.error("Error al aplicar a la guardia.");
     }
   };
 
@@ -183,15 +183,15 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
         .eq('id', shift.id);
         
       if (error) throw error;
-      alert("✅ Asistencia confirmada. Gracias por avisar con antelación.");
+      toast.success("✅ Asistencia confirmada. Gracias por avisar con antelación.");
     } catch (error) {
       console.error("Error confirming attendance:", error);
-      alert("Error al confirmar asistencia.");
+      toast.error("Error al confirmar asistencia.");
     }
   };
 
   const handleSyncCalendar = () => {
-    alert("📅 Evento añadido a tu Google Calendar.");
+    toast.success("📅 Evento añadido a tu Google Calendar.");
   };
 
   return (
@@ -274,10 +274,15 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
             </div>
           </div>
         )}
-        {shift.contact_person && (
-          <div className="pt-2 border-t border-gray-100 flex items-center gap-2 text-sm text-gray-600">
-            <UserCircle className="w-4 h-4 text-gray-400" />
-            <span>Contacto: {shift.contact_person}</span>
+        {shift.contact_person && isAssigned && (
+          <div className="pt-3 border-t border-gray-100 flex items-center justify-between bg-green-50/50 p-2 rounded-lg text-sm text-gray-700">
+            <div className="flex items-center gap-2">
+              <UserCircle className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="font-semibold text-gray-900">Contacto de la Institución</p>
+                <p>{shift.contact_person}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -293,16 +298,22 @@ function ShiftCard({ shift, onApply, isMyShift, userId }: { shift: Shift, onAppl
           </button>
         ) : (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-center gap-2 text-sm font-medium">
+            <div className="flex flex-col items-center justify-center gap-1 text-sm font-medium w-full">
               {isAssigned ? (
                 <span className="text-green-600 flex items-center gap-1">
                   <CheckCircle2 className="w-4 h-4" />
                   Asignada a ti
                 </span>
               ) : (
-                <span className="text-yellow-600">
-                  Esperando respuesta...
-                </span>
+                <div className="bg-yellow-50 text-yellow-800 p-3 rounded-lg border border-yellow-200 text-center w-full">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <Clock className="w-4 h-4" />
+                    <span>Postulación en evaluación</span>
+                  </div>
+                  <p className="text-xs font-normal opacity-80 mt-1">
+                    La institución revisará tu perfil. Si eres el candidato elegido, se habilitará aquí el número de contacto directo para coordinar.
+                  </p>
+                </div>
               )}
             </div>
 

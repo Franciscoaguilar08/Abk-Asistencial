@@ -4,6 +4,7 @@ import { User, Shift } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 interface ClinicDashboardProps {
@@ -64,11 +65,11 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       if (error) throw error;
       
       setIsModalOpen(false);
-      alert('Oportunidad publicada exitosamente');
+      toast.success('Oportunidad publicada exitosamente');
       fetchShifts();
     } catch (error) {
       console.error("Error creating shift:", error);
-      alert("Error al publicar la oportunidad.");
+      toast.error("Error al publicar la oportunidad.");
     }
   };
 
@@ -84,11 +85,11 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         
       if (error) throw error;
       
-      alert('Médico asignado exitosamente');
+      toast.success('Médico asignado exitosamente');
       fetchShifts();
     } catch (error) {
       console.error("Error assigning doctor:", error);
-      alert("Error al asignar médico.");
+      toast.error("Error al asignar médico.");
     }
   };
 
@@ -212,8 +213,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Persona de Contacto</label>
-                  <input type="text" name="contactPerson" placeholder="Ej: Dr. Juan Pérez (Jefe de Guardia)" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Datos de Contacto (Privado)</label>
+                  <input type="text" name="contactPerson" placeholder="Ej: Dr. Juan Pérez (WhatsApp: 11-1234-5678)" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-xs text-gray-500 mt-1">Este dato solo será visible para el profesional una vez que lo asignes a la guardia.</p>
                 </div>
               </div>
 
@@ -319,12 +321,6 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
             <DollarSign className="w-4 h-4 text-green-600" />
             <span>${shift.price.toLocaleString('es-AR')}</span>
           </div>
-          {shift.contact_person && (
-            <div className="flex items-center gap-2 col-span-2 pt-1">
-              <UserCircle className="w-4 h-4 text-gray-400" />
-              <span>Contacto: {shift.contact_person}</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -406,7 +402,11 @@ function ClinicShiftCard({ shift, onAssign }: { shift: Shift, onAssign: (shiftId
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
-            <p>Aún no hay postulantes para esta guardia.</p>
+            <Users className="w-10 h-10 text-gray-300 mb-2" />
+            <p className="font-medium text-gray-900">Aún no hay postulantes</p>
+            <p className="text-sm mt-1 max-w-[250px]">
+              Te notificaremos cuando un médico se postule. Al aceptar a un médico, le compartiremos tus datos para coordinar.
+            </p>
           </div>
         )}
       </div>
