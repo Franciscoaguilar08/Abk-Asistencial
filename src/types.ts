@@ -6,6 +6,11 @@ export interface User {
   role: Role;
   email: string;
   avatar?: string;
+  dni?: string; // Para profesionales
+  license_number?: string; // Matrícula
+  jurisdiction?: string; // Jurisdicción de la matrícula
+  cuit?: string; // Para instituciones
+  verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
   // Doctor specific
   specialty?: string;
   rating?: number;

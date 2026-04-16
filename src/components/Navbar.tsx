@@ -1,4 +1,4 @@
-import { Activity, LogOut, User as UserIcon } from 'lucide-react';
+import { Activity, LogOut, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { User } from '../types';
 import { Link } from 'react-router-dom';
 
@@ -29,7 +29,12 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                     <UserIcon className="w-4 h-4 text-gray-500" />
                   </div>
                 )}
-                <span className="font-medium hidden sm:inline-block">{currentUser.name}</span>
+                <span className="font-medium hidden sm:inline-block flex items-center gap-1">
+                  {currentUser.name}
+                  {currentUser.verification_status === 'verified' && (
+                    <ShieldCheck className="w-4 h-4 text-blue-600" title="Cuenta verificada" />
+                  )}
+                </span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium capitalize hidden sm:inline-block">
                   {currentUser.role === 'clinic' ? 'Institución' : 'Médico'}
                 </span>

@@ -13,6 +13,7 @@ import DoctorDashboard from './pages/DoctorDashboard';
 import ClinicDashboard from './pages/ClinicDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Navbar from './components/Navbar';
+import OnboardingModal from './components/OnboardingModal';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -97,6 +98,9 @@ export default function App() {
           <div className="bg-yellow-50 border-b border-yellow-200 p-4 text-center text-yellow-800 text-sm">
             <strong>Atención:</strong> Las variables de entorno de Supabase no están configuradas. La aplicación no funcionará correctamente hasta que agregues <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>.
           </div>
+        )}
+        {currentUser && currentUser.verification_status !== 'verified' && (
+          <OnboardingModal user={currentUser} onComplete={setCurrentUser} />
         )}
         <Navbar currentUser={currentUser} onLogout={logout} />
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
