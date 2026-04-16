@@ -22,7 +22,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin,
           data: {
             role: selectedRole,
             name: email.split('@')[0] // Default name
