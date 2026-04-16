@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star } from 'lucide-react';
+import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
+import ChatModal from '../components/ChatModal';
 
 interface ClinicDashboardProps {
   user: User;
@@ -15,6 +16,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
 
   useEffect(() => {
     fetchShifts();
@@ -140,6 +142,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
               onAssign={handleAssign} 
               onCancel={() => handleCancel(shift.id)}
               onRefresh={fetchShifts}
+              onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
             />
           ))
         ) : (
@@ -254,11 +257,21 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
           </div>
         </div>
       )}
+
+      {activeChat && (
+        <ChatModal 
+          shiftId={activeChat.shiftId}
+          currentUserId={user.id}
+          receiverId={activeChat.receiverId}
+          receiverName={activeChat.receiverName}
+          onClose={() => setActiveChat(null)}
+        />
+      )}
     </div>
   );
 }
 
-function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void }) {
+function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void, onOpenChat: (docId: string, docName: string) => void }) {
   const isConfirmed = shift.status === 'confirmed' || shift.status === 'completed';
   const isCancelled = shift.status === 'cancelled';
   const [assignedDoctor, setAssignedDoctor] = useState<User | null>(null);
@@ -418,7 +431,18 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh }: { shift: Shif
             
             {/* Tracking Status */}
             <div className="mt-3 p-3 bg-white rounded-lg border border-gray-200 text-sm">
-              <h5 className="font-semibold text-gray-900 mb-2">Estado de la Cobertura</h5>
+              <div className="flex items-center justify-between mb-2">
+                <h5 className="font-semibold text-gray-900">Estado de la Cobertura</h5>
+                {(shift.status === 'confirmed' || shift.status === 'completed') && assignedDoctor && (
+                  <button 
+                    onClick={() => onOpenChat(assignedDoctor.id, assignedDoctor.name)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Chat Directo
+                  </button>
+                )}
+              </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Confirmación 24hs:</span>

@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star } from 'lucide-react';
+import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
+import ChatModal from '../components/ChatModal';
 
 interface DoctorDashboardProps {
   user: User;
@@ -17,6 +18,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('Todas');
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
 
   useEffect(() => {
     fetchShifts();
@@ -182,6 +184,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
                 userId={user.id} 
                 onWithdraw={() => handleWithdraw(shift.id)}
                 onRefresh={fetchShifts}
+                onOpenChat={() => setActiveChat({ shiftId: shift.id, receiverId: shift.clinic_id, receiverName: shift.clinic_name })}
               />
             ))
           ) : (
@@ -193,11 +196,21 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
           )
         )}
       </div>
+
+      {activeChat && (
+        <ChatModal 
+          shiftId={activeChat.shiftId}
+          currentUserId={user.id}
+          receiverId={activeChat.receiverId}
+          receiverName={activeChat.receiverName}
+          onClose={() => setActiveChat(null)}
+        />
+      )}
     </div>
   );
 }
 
-function ShiftCard({ shift, onApply, onWithdraw, onRefresh, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, isMyShift?: boolean, userId?: string }) {
+function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, onOpenChat?: () => void, isMyShift?: boolean, userId?: string }) {
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
   
@@ -385,6 +398,16 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, isMyShift, userId }:
             {/* Automation & Assurance Actions */}
             {isAssigned && (
               <div className="flex flex-col gap-2 pt-2 border-t border-gray-200">
+                {onOpenChat && (
+                  <button 
+                    onClick={onOpenChat}
+                    className="w-full py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 mb-1"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Chatear con {shift.clinic_name}
+                  </button>
+                )}
+
                 <button 
                   onClick={handleSyncCalendar}
                   className="w-full py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"

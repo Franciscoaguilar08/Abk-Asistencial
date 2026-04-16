@@ -43,3 +43,12 @@ export interface Shift {
   review_for_clinic?: string;
   created_at?: string;
 }
+
+export interface Message {
+  id: string;
+  shift_id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  created_at: string;
+}
