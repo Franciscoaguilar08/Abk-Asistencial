@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink } from 'lucide-react';
+import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
@@ -163,13 +163,13 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         {activeTab === 'available' ? (
           filteredAvailableShifts.length > 0 ? (
             filteredAvailableShifts.map(shift => (
-              <ShiftCard key={shift.id} shift={shift} onApply={() => handleApply(shift.id)} />
+              <ShiftCard key={shift.id} shift={shift} onApply={() => handleApply(shift.id)} onRefresh={fetchShifts} />
             ))
           ) : (
             <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200 border-dashed">
               <BriefcaseMedical className="w-12 h-12 mx-auto mb-3 text-gray-400" />
               <p className="text-lg font-medium text-gray-900">No hay oportunidades nuevas</p>
-              <p>No se encontraron guardias o eventos disponibles en este momento.</p>
+              <p>Pronto se publicarán nuevas guardias. Modifica los filtros para ver más.</p>
             </div>
           )
         ) : (
@@ -181,6 +181,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
                 isMyShift 
                 userId={user.id} 
                 onWithdraw={() => handleWithdraw(shift.id)}
+                onRefresh={fetchShifts}
               />
             ))
           ) : (
@@ -196,12 +197,39 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   );
 }
 
-function ShiftCard({ shift, onApply, onWithdraw, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, isMyShift?: boolean, userId?: string }) {
+function ShiftCard({ shift, onApply, onWithdraw, onRefresh, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, isMyShift?: boolean, userId?: string }) {
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
   
   const shiftDate = new Date(shift.date);
   const isShiftTomorrow = isTomorrow(shiftDate);
+
+  const [ratingVal, setRatingVal] = useState(0);
+  const [reviewTxt, setReviewTxt] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+
+  const submitRating = async () => {
+    if (ratingVal === 0) {
+      toast.error('Selecciona entre 1 y 5 estrellas.');
+      return;
+    }
+    setSubmittingRating(true);
+    try {
+      const { error } = await supabase.from('shifts').update({
+        rating_for_clinic: ratingVal,
+        review_for_clinic: reviewTxt,
+        status: 'completed'
+      }).eq('id', shift.id);
+
+      if (error) throw error;
+      toast.success('¡Gracias por evaluar a la institución!');
+      if (onRefresh) onRefresh();
+    } catch(err) {
+      toast.error('Error al enviar la calificación.');
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
 
   const handleConfirmAttendance = async () => {
     try {
@@ -373,6 +401,52 @@ function ShiftCard({ shift, onApply, onWithdraw, isMyShift, userId }: { shift: S
                     <CheckCircle2 className="w-4 h-4" />
                     Confirmar Asistencia (Faltan 24hs)
                   </button>
+                )}
+
+                {/* Rating System */}
+                {(shift.status === 'completed' || (shift.status === 'confirmed' && new Date(shift.date) <= new Date())) && (
+                  <div className="mt-3 p-4 bg-purple-50 bg-opacity-50 rounded-lg border border-purple-100">
+                    {shift.rating_for_clinic ? (
+                      <div className="space-y-2">
+                        <h5 className="font-semibold text-gray-900 flex items-center gap-2">
+                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                            Calificaste a esta institución
+                        </h5>
+                        <div className="flex gap-1">
+                          {[1,2,3,4,5].map(star => (
+                            <Star key={star} className={`w-4 h-4 ${star <= shift.rating_for_clinic! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                          ))}
+                        </div>
+                        {shift.review_for_clinic && <p className="text-sm text-gray-700 italic border-l-2 border-yellow-300 pl-2 mt-2">{shift.review_for_clinic}</p>}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <h5 className="font-semibold text-gray-900 text-sm">Evalúa la Institución</h5>
+                        <p className="text-[11px] text-gray-600">Al finalizar la guardia, evalúa el trato y puntualidad en los pagos.</p>
+                        <div className="flex gap-1">
+                          {[1,2,3,4,5].map(star => (
+                            <button key={star} onClick={() => setRatingVal(star)} className="focus:outline-none hover:scale-110 transition-transform">
+                              <Star className={`w-5 h-5 ${star <= ratingVal ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300 hover:text-yellow-400'}`} />
+                            </button>
+                          ))}
+                        </div>
+                        <textarea 
+                          placeholder="Tu comentario (opcional)..." 
+                          value={reviewTxt}
+                          onChange={e => setReviewTxt(e.target.value)}
+                          className="w-full px-3 py-2 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
+                          rows={2}
+                        />
+                        <button 
+                          onClick={submitRating}
+                          disabled={submittingRating || ratingVal === 0}
+                          className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                        >
+                          {submittingRating ? 'Enviando...' : 'Enviar Calificación'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}

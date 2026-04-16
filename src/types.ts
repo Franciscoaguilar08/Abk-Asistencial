@@ -37,5 +37,9 @@ export interface Shift {
   applicants: string[]; // array of doctor IDs
   assigned_doctor_id?: string;
   attendance_confirmed?: boolean; // Confirmación 24hs antes
+  rating_for_doctor?: number; // 1 to 5, given by clinic
+  review_for_doctor?: string;
+  rating_for_clinic?: number; // 1 to 5, given by doctor
+  review_for_clinic?: string;
   created_at?: string;
 }

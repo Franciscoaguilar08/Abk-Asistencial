@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink } from 'lucide-react';
+import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
@@ -139,6 +139,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
               shift={shift} 
               onAssign={handleAssign} 
               onCancel={() => handleCancel(shift.id)}
+              onRefresh={fetchShifts}
             />
           ))
         ) : (
@@ -257,13 +258,40 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   );
 }
 
-function ClinicShiftCard({ shift, onAssign, onCancel }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void }) {
+function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void }) {
   const isConfirmed = shift.status === 'confirmed' || shift.status === 'completed';
   const isCancelled = shift.status === 'cancelled';
   const [assignedDoctor, setAssignedDoctor] = useState<User | null>(null);
 
   if (isCancelled) return null; // Or render a cancelled state if preferred
   const [applicants, setApplicants] = useState<User[]>([]);
+
+  const [ratingVal, setRatingVal] = useState(0);
+  const [reviewTxt, setReviewTxt] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
+
+  const submitRating = async () => {
+    if (ratingVal === 0) {
+      toast.error('Selecciona entre 1 y 5 estrellas.');
+      return;
+    }
+    setSubmittingRating(true);
+    try {
+      const { error } = await supabase.from('shifts').update({
+        rating_for_doctor: ratingVal,
+        review_for_doctor: reviewTxt,
+        status: 'completed'
+      }).eq('id', shift.id);
+
+      if (error) throw error;
+      toast.success('¡Gracias por calificar al profesional!');
+      onRefresh();
+    } catch(err) {
+      toast.error('Error al enviar la calificación.');
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -402,6 +430,52 @@ function ClinicShiftCard({ shift, onAssign, onCancel }: { shift: Shift, onAssign
                 </div>
               </div>
             </div>
+
+            {/* Rating System */}
+            {shift.status === 'completed' || (isConfirmed && new Date(shift.date) <= new Date()) ? (
+              <div className="mt-4 p-4 bg-blue-50 bg-opacity-50 rounded-lg border border-blue-100">
+                {shift.rating_for_doctor ? (
+                   <div className="space-y-2">
+                     <h5 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        Calificaste a este médico
+                     </h5>
+                     <div className="flex gap-1">
+                       {[1,2,3,4,5].map(star => (
+                         <Star key={star} className={`w-4 h-4 ${star <= shift.rating_for_doctor! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                       ))}
+                     </div>
+                     {shift.review_for_doctor && <p className="text-sm text-gray-700 italic border-l-2 border-yellow-300 pl-2 mt-2">{shift.review_for_doctor}</p>}
+                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    <h5 className="font-semibold text-gray-900">Evalúa al médico</h5>
+                    <p className="text-xs text-gray-600">24hs después de la fecha de la guardia, puedes calificar el desempeño para mantener la calidad de la red.</p>
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map(star => (
+                        <button key={star} onClick={() => setRatingVal(star)} className="focus:outline-none hover:scale-110 transition-transform">
+                          <Star className={`w-6 h-6 ${star <= ratingVal ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300 hover:text-yellow-400'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea 
+                      placeholder="Deja un comentario sobre su desempeño (opcional)..." 
+                      value={reviewTxt}
+                      onChange={e => setReviewTxt(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
+                      rows={2}
+                    />
+                    <button 
+                      onClick={submitRating}
+                      disabled={submittingRating || ratingVal === 0}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {submittingRating ? 'Enviando...' : 'Enviar Calificación'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </>
         ) : applicants.length > 0 ? (
           <div className="space-y-3 overflow-y-auto max-h-48 pr-2">
