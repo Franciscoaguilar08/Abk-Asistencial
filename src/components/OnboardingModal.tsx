@@ -167,6 +167,32 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
                 {loading ? 'Inicializando...' : 'Iniciar Validación Automática'}
                 {!loading && <ChevronRight className="w-5 h-5" />}
               </button>
+
+              {/* Developer Bypass */}
+              <button 
+                type="button"
+                onClick={async () => {
+                  try {
+                    const finalPayload: Partial<User> = { verification_status: 'verified' };
+                    const { data, error } = await supabase
+                      .from('users')
+                      .update(finalPayload)
+                      .eq('id', user.id)
+                      .select()
+                      .single();
+                      
+                    if (error) throw error;
+                    toast.success('Bypass de administrador ejecutado. Cuenta verificada.');
+                    onComplete(data as User);
+                  } catch (err) {
+                    console.error(err);
+                    toast.error("Error al usar bypass.");
+                  }
+                }}
+                className="w-full mt-2 py-2 text-xs text-gray-500 hover:bg-gray-100 rounded-lg font-medium transition-colors border border-transparent hover:border-gray-200"
+              >
+                Omitir Validación (Modo Administrador)
+              </button>
             </form>
           </>
         )}

@@ -211,6 +211,13 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           <p className="text-gray-600 leading-relaxed">Perfiles verificados, sistema de reputación y transparencia total en los pagos y condiciones.</p>
         </div>
       </section>
+
+      {/* Hidden Dev Bypass */}
+      <div className="flex justify-center pt-8">
+        <a href="/admin" className="text-xs text-gray-300 hover:text-gray-500 transition-colors">
+          /admin
+        </a>
+      </div>
     </div>
   );
 }

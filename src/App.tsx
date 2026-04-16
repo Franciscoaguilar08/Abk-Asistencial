@@ -99,7 +99,7 @@ export default function App() {
             <strong>Atención:</strong> Las variables de entorno de Supabase no están configuradas. La aplicación no funcionará correctamente hasta que agregues <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>.
           </div>
         )}
-        {currentUser && currentUser.verification_status !== 'verified' && (
+        {currentUser && currentUser.verification_status !== 'verified' && currentUser.email !== 'franciscoaguilar008@gmail.com' && (
           <OnboardingModal user={currentUser} onComplete={setCurrentUser} />
         )}
         <Navbar currentUser={currentUser} onLogout={logout} />

@@ -68,6 +68,15 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         
       if (error) throw error;
       
+      // Crear notificación para la clínica
+      await supabase.from('notifications').insert({
+        user_id: shift.clinic_id,
+        title: 'Nueva postulación',
+        message: `${user.name} se ha postulado para la guardia del ${format(new Date(shift.date), 'dd/MM')} - ${shift.type}`,
+        type: 'application',
+        shift_id: shiftId
+      });
+
       toast.success(`Has aplicado a la guardia exitosamente.`);
       fetchShifts(); // Refresh data
     } catch (error) {

@@ -77,6 +77,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
 
   const handleAssign = async (shiftId: string, doctorId: string) => {
     try {
+      const shift = shifts.find(s => s.id === shiftId);
+      if (!shift) return;
+
       const { error } = await supabase
         .from('shifts')
         .update({
@@ -87,6 +90,15 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         
       if (error) throw error;
       
+      // Crear notificación para el médico
+      await supabase.from('notifications').insert({
+        user_id: doctorId,
+        title: '¡Guardia Confirmada!',
+        message: `${user.name} te ha asignado a la guardia del ${format(new Date(shift.date), 'dd/MM')} - ${shift.type}`,
+        type: 'assignment',
+        shift_id: shiftId
+      });
+
       toast.success('Médico asignado exitosamente');
       fetchShifts();
     } catch (error) {

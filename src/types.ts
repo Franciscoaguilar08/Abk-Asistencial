@@ -57,3 +57,14 @@ export interface Message {
   content: string;
   created_at: string;
 }
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'application' | 'assignment' | 'system';
+  read: boolean;
+  shift_id?: string;
+  created_at: string;
+}
