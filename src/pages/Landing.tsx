@@ -1,21 +1,33 @@
-import { ArrowRight, Stethoscope, Building2, Clock, ShieldCheck, Zap, Mail, Lock, BadgeCheck, MessageSquareLock, CheckCircle2, Activity } from 'lucide-react';
+import { Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, Check } from 'lucide-react';
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface LandingProps {
   onLoginSuccess: (user: User) => void;
 }
 
 export default function Landing({ onLoginSuccess }: LandingProps) {
-  const [mode, setMode] = useState<'login' | 'register' | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [selectedRole, setSelectedRole] = useState<'doctor' | 'clinic' | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const openAuth = (initialMode: 'login' | 'register', role?: 'doctor' | 'clinic') => {
+    setMode(initialMode);
+    if (role) setSelectedRole(role);
+    setShowAuthModal(true);
+    setEmailSent(false);
+  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +41,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
 
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
       if (!passwordRegex.test(password)) {
-        alert("La contraseña debe tener al menos 8 caracteres, incluyendo una letra mayúscula, un número y un carácter especial (ej: @$!%*?&).");
+        alert("La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 número y 1 símbolo especial.");
         return;
       }
     }
@@ -42,10 +54,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           email,
           password,
           options: {
-            data: {
-              role: selectedRole,
-              name: email.split('@')[0]
-            }
+            data: { role: selectedRole, name: email.split('@')[0] }
           }
         });
 
@@ -58,18 +67,10 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           setEmailSent(true);
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            throw new Error('Credenciales inválidas. Revisa tu correo y contraseña.');
-          }
-          if (error.message.includes('Email not confirmed')) {
-            throw new Error('Por favor confirma tu correo electrónico antes de iniciar sesión.');
-          }
+          if (error.message.includes('Invalid login credentials')) throw new Error('Credenciales inválidas.');
+          if (error.message.includes('Email not confirmed')) throw new Error('Por favor confirma tu correo.');
           throw error;
         }
       }
@@ -82,279 +83,319 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen relative overflow-hidden bg-gray-50">
-      {/* Dynamic Background */}
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100 via-white to-gray-50 opacity-80" />
-      <div className="absolute top-0 w-full h-96 bg-gradient-to-b from-blue-50/50 to-transparent -z-10" />
-
-      {/* Hero Section */}
-      <section className="pt-16 pb-20 px-4">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
-          
-          {/* Left Column: Copy & Value Prop */}
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="space-y-8 text-center lg:text-left"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100/50 border border-blue-200 text-blue-700 text-sm font-semibold shadow-sm">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Plataforma Oficial Segura</span>
+    <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
+      {/* NAVBAR */}
+      <nav className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-gray-100 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
+              <div className="bg-blue-600 text-white p-1.5 rounded-lg">
+                <Activity className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-xl text-gray-900 tracking-tight">ABK Asistencial</span>
             </div>
             
-            <h1 className="text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-gray-900 leading-[1.1]">
-              Conectamos médicos con <br />
+            <div className="hidden md:flex items-center gap-8">
+              <button onClick={() => scrollTo('como-funciona')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Cómo funciona</button>
+              <button onClick={() => scrollTo('para-quien')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Para quién es</button>
+              <button onClick={() => scrollTo('seguridad')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Seguridad</button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button onClick={() => openAuth('login')} className="text-sm font-medium text-gray-700 hover:text-blue-600 px-3 py-2 transition">
+                Ingresar
+              </button>
+              <button onClick={() => openAuth('register')} className="text-sm font-bold bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition shadow-sm hover:shadow-md">
+                Crear cuenta
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="pt-16 flex-grow">
+        {/* HERO SECTION */}
+        <section className="relative pt-20 pb-24 lg:pt-32 lg:pb-40 overflow-hidden">
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50 via-white to-gray-50 opacity-90" />
+          <div className="max-w-5xl mx-auto px-4 text-center">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight"
+            >
+              Encontrá o cubrí <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                guardias reales, en minutos
+                guardias médicas en minutos
               </span>
-            </h1>
+            </motion.h1>
             
-            <p className="text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-              Conectamos de forma inteligente a instituciones y organizadores con profesionales de la salud. Todos los perfiles son rigurosamente validados a nivel nacional.
-            </p>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed"
+            >
+              Conectamos profesionales de la salud con instituciones que necesitan resolver guardias y coberturas de forma rápida, confiable y verificada.
+            </motion.p>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            >
+              <button 
+                onClick={() => openAuth('register', 'doctor')}
+                className="w-full sm:w-auto px-8 py-4 bg-white border-2 border-gray-200 text-gray-800 rounded-full font-bold hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+              >
+                <Stethoscope className="w-5 h-5" />
+                Soy profesional
+              </button>
+              <button 
+                onClick={() => openAuth('register', 'clinic')}
+                className="w-full sm:w-auto px-8 py-4 bg-gray-900 text-white rounded-full font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-sm"
+              >
+                <Building2 className="w-5 h-5" />
+                Soy institución
+              </button>
+            </motion.div>
+            
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-8"
+            >
+              <button onClick={() => openAuth('login')} className="text-sm text-gray-500 hover:text-gray-900 font-medium">
+                ¿Ya tenés cuenta? <span className="text-blue-600 hover:underline">Ingresar</span>
+              </button>
+            </motion.div>
+          </div>
+        </section>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <div className="flex items-center gap-2 text-gray-700 bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                <span className="font-medium text-sm">Validación SISA</span>
+        {/* COMO FUNCIONA */}
+        <section id="como-funciona" className="py-24 bg-white border-t border-gray-100">
+          <div className="max-w-6xl mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-16">Cómo funciona</h2>
+            <div className="grid md:grid-cols-3 gap-12">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+                  <Activity className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">1. Publicás o buscás</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Instituciones publican coberturas. Profesionales exploran oportunidades según disponibilidad, ubicación y tipo de trabajo.
+                </p>
               </div>
-              <div className="flex items-center gap-2 text-gray-700 bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm">
-                <Lock className="w-5 h-5 text-blue-500" />
-                <span className="font-medium text-sm">Chat Encriptado</span>
+              <div className="text-center relative">
+                <div className="hidden md:block absolute top-8 -left-6 w-12 border-t-2 border-dashed border-gray-200" />
+                <div className="w-16 h-16 mx-auto bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-6">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">2. Verificación</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Todos los perfiles pasan por validación de matrícula y revisión básica para dar más confianza y seguridad.
+                </p>
+                <div className="hidden md:block absolute top-8 -right-6 w-12 border-t-2 border-dashed border-gray-200" />
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-6">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">3. Elegís y trabajás</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  La institución elige al profesional o el profesional acepta la oportunidad. Resolvé sin cadenas interminables de WhatsApp.
+                </p>
               </div>
             </div>
-          </motion.div>
+          </div>
+        </section>
 
-          {/* Right Column: Interactive Auth Form */}
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-3xl rotate-3 scale-105 opacity-10 blur-lg" />
-            
-            <div className="relative bg-white/80 backdrop-blur-xl p-8 sm:p-10 rounded-3xl shadow-2xl border border-white/50">
-              {!mode ? (
-                <div className="space-y-6 text-center">
-                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-inner">
-                    <Activity className="w-8 h-8" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900">Bienvenido a ABK</h2>
-                  <p className="text-gray-500 text-sm">Ingresa a tu portal seguro para continuar</p>
-                  <div className="space-y-3 pt-4">
-                    <button 
-                      onClick={() => setMode('login')}
-                      className="w-full flex items-center justify-center gap-2 px-8 py-3.5 bg-white border-2 border-blue-600 text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-colors"
-                    >
-                      Iniciar Sesión
-                    </button>
-                    <button 
-                      onClick={() => setMode('register')}
-                      className="w-full flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
-                    >
-                      Soy nuevo (Crear cuenta)
-                    </button>
-                  </div>
+        {/* PARA QUIEN ES */}
+        <section id="para-quien" className="py-24 bg-gray-50 border-t border-gray-200">
+          <div className="max-w-6xl mx-auto px-4">
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-16">Pensado para quienes necesitan resolver rápido</h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
+                  <Building2 className="w-6 h-6" />
                 </div>
-              ) : mode === 'register' && !selectedRole ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                  <h3 className="text-xl font-bold text-gray-900 text-center">Selecciona tu perfil</h3>
-                  <div className="grid gap-4">
-                    <button 
-                      onClick={() => setSelectedRole('doctor')}
-                      className="group flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
-                    >
-                      <div className="bg-blue-100 p-3 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        <Stethoscope className="w-6 h-6 text-blue-600 group-hover:text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-gray-900">Médico Profesional</h4>
-                        <p className="text-xs text-gray-500 mt-1">Busco y aplico a guardias/eventos</p>
-                      </div>
-                    </button>
-                    
-                    <button 
-                      onClick={() => setSelectedRole('clinic')}
-                      className="group flex items-center gap-4 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
-                    >
-                      <div className="bg-purple-100 p-3 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                        <Building2 className="w-6 h-6 text-purple-600 group-hover:text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-gray-900">Institución / Organizador</h4>
-                        <p className="text-xs text-gray-500 mt-1">Busco profesionales para cubrir turnos</p>
-                      </div>
-                    </button>
-                  </div>
-                  <button 
-                    onClick={() => setMode(null)}
-                    className="w-full text-sm text-gray-500 hover:text-gray-900 text-center font-medium"
-                  >
-                    ← Volver atrás
-                  </button>
-                </motion.div>
-              ) : emailSent ? (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-4">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Mail className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900">¡Bandeja de entrada!</h3>
-                  <p className="text-gray-600">Para activar tu cuenta de forma segura, haz clic en el enlace que enviamos a <strong className="text-gray-900">{email}</strong>.</p>
-                  <button 
-                    onClick={() => {setEmailSent(false); setMode('login'); setSelectedRole(null);}}
-                    className="mt-6 w-full py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition shadow-md"
-                  >
-                    Ya confirmé mi correo, Iniciar Sesión
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} onSubmit={handleAuthSubmit} className="space-y-5">
-                  <h3 className="text-2xl font-bold text-gray-900 text-center mb-6">
-                    {mode === 'login' ? 'Iniciar Sesión' : `Registro: ${selectedRole === 'doctor' ? 'Médico' : 'Institución'}`}
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Clínicas</h3>
+                <p className="text-gray-600">Para cubrir vacantes, reemplazos o guardias con mayor agilidad.</p>
+              </div>
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Sanatorios</h3>
+                <p className="text-gray-600">Para organizar coberturas con profesionales validados y reducir fricción operativa.</p>
+              </div>
+              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
+                  <Stethoscope className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Médicos freelance</h3>
+                <p className="text-gray-600">Para encontrar guardias y oportunidades laborales de forma más simple, clara y ordenada.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* DIFERENCIAL */}
+        <section className="py-24 bg-white border-t border-gray-100">
+          <div className="max-w-6xl mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-16">Por qué usar esta plataforma</h2>
+            <div className="grid md:grid-cols-3 gap-8 text-left">
+              <div className="bg-gray-50/50 p-8 rounded-3xl border border-gray-100 hover:shadow-md transition">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
+                  <BadgeCheck className="w-6 h-6" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">Validación de matrícula</h4>
+                <p className="text-gray-600 leading-relaxed">Buscamos que los profesionales que participan estén correctamente identificados y verificados.</p>
+              </div>
+              <div className="bg-gray-50/50 p-8 rounded-3xl border border-gray-100 hover:shadow-md transition">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
+                  <Zap className="w-6 h-6" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">Rapidez</h4>
+                <p className="text-gray-600 leading-relaxed">Menos tiempo buscando, menos idas y vueltas, más resolución.</p>
+              </div>
+              <div className="bg-gray-50/50 p-8 rounded-3xl border border-gray-100 hover:shadow-md transition">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
+                  <MessageSquareLock className="w-6 h-6" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">Sin intermediarios informales</h4>
+                <p className="text-gray-600 leading-relaxed">Todo en un mismo lugar, con mayor orden, trazabilidad y confianza.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CONFIANZA */}
+        <section id="seguridad" className="py-24 bg-blue-900 text-white">
+          <div className="max-w-6xl mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-6">Más seguridad para trabajar mejor</h2>
+            <p className="text-blue-100 text-lg max-w-2xl mx-auto mb-12">
+              Perfiles profesionales, datos organizados y un sistema pensado para dar más transparencia al vínculo entre instituciones y médicos.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <span className="flex items-center gap-2 bg-blue-800/50 border border-blue-700 px-4 py-2 rounded-full font-medium">
+                <Check className="w-4 h-4 text-blue-300" /> Profesionales verificados
+              </span>
+              <span className="flex items-center gap-2 bg-blue-800/50 border border-blue-700 px-4 py-2 rounded-full font-medium">
+                <Check className="w-4 h-4 text-blue-300" /> Coberturas más ágiles
+              </span>
+              <span className="flex items-center gap-2 bg-blue-800/50 border border-blue-700 px-4 py-2 rounded-full font-medium">
+                <Check className="w-4 h-4 text-blue-300" /> Información centralizada
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA FINAL */}
+        <section className="py-24 bg-white">
+          <div className="max-w-4xl mx-auto px-4 text-center">
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-6">Empezá hoy</h2>
+            <p className="text-lg text-gray-600 mb-10">
+              Ya seas médico o institución, la plataforma está pensada para hacer más simple la cobertura de guardias y oportunidades.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button onClick={() => openAuth('register', 'doctor')} className="px-8 py-4 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition shadow-md">
+                Crear cuenta como profesional
+              </button>
+              <button onClick={() => openAuth('register', 'clinic')} className="px-8 py-4 bg-gray-900 text-white rounded-full font-bold hover:bg-gray-800 transition shadow-md">
+                Crear cuenta como institución
+              </button>
+              <button onClick={() => openAuth('login')} className="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-full font-bold hover:bg-gray-50 transition">
+                Ingresar
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* AUTH MODAL */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    {mode === 'login' ? 'Ingresar a ABK' : 'Crear tu cuenta'}
                   </h3>
-                  
-                  <div className="space-y-4">
+                  <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:bg-gray-100 hover:text-gray-600 p-2 rounded-full transition">
+                    &times;
+                  </button>
+                </div>
+
+                {emailSent ? (
+                  <div className="text-center space-y-4 py-8">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Mail className="w-8 h-8 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">¡Revisa tu correo!</h3>
+                    <p className="text-gray-600 text-sm">Validá tu email haciendo clic en el enlace que enviamos a <strong>{email}</strong>.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleAuthSubmit} className="space-y-5">
+                    {mode === 'register' && !selectedRole && (
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <button type="button" onClick={() => setSelectedRole('doctor')} className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 ${selectedRole === 'doctor' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                          <Stethoscope className="w-6 h-6" /> <span className="text-sm font-bold">Médico</span>
+                        </button>
+                        <button type="button" onClick={() => setSelectedRole('clinic')} className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 ${selectedRole === 'clinic' ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                          <Building2 className="w-6 h-6" /> <span className="text-sm font-bold">Institución</span>
+                        </button>
+                      </div>
+                    )}
+
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Correo electrónico</label>
-                      <input 
-                        type="email" 
-                        required 
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="tu@correo.com" 
-                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-                      />
+                      <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" />
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Contraseña</label>
-                      <input 
-                        type="password" 
-                        required 
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder={mode === 'register' ? "Crea una contraseña segura" : "Tu contraseña"} 
-                        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-                      />
+                      <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder={mode === 'register' ? "Crea una contraseña segura" : "Tu contraseña"} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" />
                       {mode === 'register' && (
-                        <p className="text-[11px] text-gray-500 mt-2 px-1 leading-tight flex items-start gap-1">
-                          <Lock className="w-3 h-3 shrink-0 mt-0.5" />
-                          <span>Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 símbolo especial (@$!%*?&).</span>
-                        </p>
+                        <p className="text-[11px] text-gray-500 mt-2 px-1 leading-tight">Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 símbolo (@$!%*?&).</p>
                       )}
                     </div>
-                    
+
                     {mode === 'register' && (
                       <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                        <input 
-                          type="checkbox" 
-                          id="terms" 
-                          required
-                          checked={acceptedTerms}
-                          onChange={(e) => setAcceptedTerms(e.target.checked)}
-                          className="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                        />
-                        <label htmlFor="terms" className="text-xs text-gray-600 leading-relaxed cursor-pointer">
-                          Acepto que ABK Asistencial conecta a profesionales con instituciones y no es responsable de honorarios o mala praxis.
-                        </label>
+                        <input type="checkbox" id="terms" required checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                        <label htmlFor="terms" className="text-xs text-gray-600 leading-relaxed cursor-pointer">Acepto que ABK Asistencial conecta a profesionales con instituciones y no es responsable de honorarios o mala praxis.</label>
                       </div>
                     )}
 
-                    <button 
-                      type="submit"
-                      disabled={loading || (mode === 'register' && !acceptedTerms)}
-                      className="w-full flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md disabled:opacity-50 mt-2"
-                    >
-                      {loading ? 'Procesando...' : mode === 'login' ? 'Ingresar a mi portal' : 'Crear mi cuenta protegida'}
+                    <button type="submit" disabled={loading || (mode === 'register' && !acceptedTerms)} className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow disabled:opacity-50 mt-4">
+                      {loading ? 'Procesando...' : mode === 'login' ? 'Ingresar' : 'Crear mi cuenta'}
                     </button>
-                    
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        if (mode === 'register') setSelectedRole(null);
-                        else setMode(null);
-                      }}
-                      className="w-full text-sm text-gray-500 hover:text-gray-900 font-medium py-2"
-                    >
-                      {mode === 'register' ? 'Cambiar tipo de perfil' : '← Volver atrás'}
-                    </button>
-                  </div>
-                </motion.form>
-              )}
-            </div>
+
+                    <div className="text-center pt-2">
+                      <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setSelectedRole(null); }} className="text-sm text-gray-500 hover:text-blue-600 font-medium">
+                        {mode === 'login' ? '¿No tenés cuenta? Registrate' : '¿Ya tenés cuenta? Iniciá sesión'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Security & Features Bento Grid */}
-      <section className="bg-white py-20 border-t border-gray-100 relative">
-        <div className="max-w-6xl mx-auto px-4 z-10 relative">
-          
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl font-display font-bold text-gray-900 mb-4">La seguridad médica como prioridad</h2>
-            <p className="text-gray-600 text-lg">
-              Diseñamos un ecosistema digital que filtra y protege cada interacción, garantizando contrataciones sólidas.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            
-            {/* Feature 1 */}
-            <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              className="bg-blue-50/50 p-8 rounded-3xl border border-blue-100 hover:shadow-lg transition-all"
-            >
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                <BadgeCheck className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Auditoría SISA y AFIP</h3>
-              <p className="text-gray-600 leading-relaxed text-sm">
-                Todos los profesionales deben validar su DNI y Matrícula Nacional/Provincial (M.N. / M.P.). Las instituciones validan su vigencia fiscal verificando su inscripción en AFIP.
-              </p>
-            </motion.div>
-
-            {/* Feature 2 */}
-            <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="bg-purple-50/50 p-8 rounded-3xl border border-purple-100 hover:shadow-lg transition-all"
-            >
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                <MessageSquareLock className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Chats Encriptados</h3>
-              <p className="text-gray-600 leading-relaxed text-sm">
-                La negociación de honorarios y cruce de datos logísticos se realiza a través de nuestro mensajero interno en tiempo real, bloqueado y visible solo para las partes involucradas.
-              </p>
-            </motion.div>
-
-            {/* Feature 3 */}
-            <motion.div 
-              initial={{ y: 20, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="bg-emerald-50/50 p-8 rounded-3xl border border-emerald-100 hover:shadow-lg transition-all"
-            >
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-                <ShieldCheck className="w-6 h-6 text-emerald-600" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Reputación Bidireccional</h3>
-              <p className="text-gray-600 leading-relaxed text-sm">
-                Al finalizar una guardia, ambas partes se califican. Esto genera un historial de confianza que premia a las clínicas que pagan a término y a los de asistencia impecable.
-              </p>
-            </motion.div>
-
-          </div>
-        </div>
-      </section>
-      
+        )}
+      </AnimatePresence>
     </div>
   );
 }
