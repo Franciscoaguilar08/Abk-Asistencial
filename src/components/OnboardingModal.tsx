@@ -75,6 +75,35 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
     }
   };
 
+  const handleBypass = async () => {
+    if (!formData.name) {
+      toast.error(user.role === 'doctor' ? 'Por favor ingresa tu nombre completo.' : 'Por favor ingresa la razón social.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const updatePayload: Partial<User> = { 
+        name: formData.name,
+        verification_status: 'verified' 
+      };
+      const { data, error } = await supabase
+        .from('users')
+        .update(updatePayload)
+        .eq('id', user.id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      toast.success('¡Entrando a la versión Beta sin validación!');
+      onComplete(data as User);
+    } catch (err) {
+      console.error(err);
+      toast.error("Error al usar bypass.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] px-4">
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative overflow-hidden">
@@ -159,40 +188,30 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
                 </>
               )}
 
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-              >
-                {loading ? 'Inicializando...' : 'Iniciar Validación Automática'}
-                {!loading && <ChevronRight className="w-5 h-5" />}
-              </button>
+              <div className="pt-4 flex flex-col gap-3">
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Inicializando...' : 'Iniciar Validación Automática'}
+                  {!loading && <ChevronRight className="w-5 h-5" />}
+                </button>
 
-              {/* Developer Bypass */}
-              <button 
-                type="button"
-                onClick={async () => {
-                  try {
-                    const finalPayload: Partial<User> = { verification_status: 'verified' };
-                    const { data, error } = await supabase
-                      .from('users')
-                      .update(finalPayload)
-                      .eq('id', user.id)
-                      .select()
-                      .single();
-                      
-                    if (error) throw error;
-                    toast.success('Bypass de administrador ejecutado. Cuenta verificada.');
-                    onComplete(data as User);
-                  } catch (err) {
-                    console.error(err);
-                    toast.error("Error al usar bypass.");
-                  }
-                }}
-                className="w-full mt-2 py-2 text-xs text-gray-500 hover:bg-gray-100 rounded-lg font-medium transition-colors border border-transparent hover:border-gray-200"
-              >
-                Omitir Validación (Modo Administrador)
-              </button>
+                <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-gray-200"></div>
+                  <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">O opciones de prueba</span>
+                  <div className="flex-grow border-t border-gray-200"></div>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={handleBypass}
+                  className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium flex items-center justify-center transition-all"
+                >
+                  No tengo estos datos: Omitir en fase Beta
+                </button>
+              </div>
             </form>
           </>
         )}
