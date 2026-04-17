@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare } from 'lucide-react';
+import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import ChatModal from '../components/ChatModal';

@@ -104,9 +104,9 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             </div>
             
             <h1 className="text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-gray-900 leading-[1.1]">
-              La red médica de <br />
+              Conectamos médicos con <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                Guaridas y Eventos
+                guardias reales, en minutos
               </span>
             </h1>
             
