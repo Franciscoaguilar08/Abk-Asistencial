@@ -14,6 +14,7 @@ import ClinicDashboard from './pages/ClinicDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Navbar from './components/Navbar';
 import OnboardingModal from './components/OnboardingModal';
+import { MessageSquarePlus } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -141,6 +142,19 @@ export default function App() {
             />
           </Routes>
         </main>
+        
+        {/* Floating Beta Feedback Button */}
+        {currentUser && (
+          <a
+            href="https://docs.google.com/forms/d/e/1FAIpQLSdM0NDJiFAbhAeuMBwakKP_eOCuycrhcFLw9iwHqP51zcyWHg/viewform?usp=publish-editor"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all"
+          >
+            <MessageSquarePlus className="w-5 h-5" />
+            <span className="font-medium text-sm">Dejanos tu opinión de la fase beta</span>
+          </a>
+        )}
       </div>
     </Router>
   );
