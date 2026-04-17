@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare, Building2 } from 'lucide-react';
+import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare, Building2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
@@ -19,6 +19,8 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
+  const [negotiatingShiftId, setNegotiatingShiftId] = useState<string | null>(null);
+  const [proposedPrice, setProposedPrice] = useState<string>('');
 
   useEffect(() => {
     fetchShifts();
@@ -54,16 +56,24 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
     return matchZone && matchSpecialty;
   });
 
-  const handleApply = async (shiftId: string) => {
+  const handleApply = async (shiftId: string, customPrice?: number) => {
     try {
       const shift = shifts.find(s => s.id === shiftId);
       if (!shift) return;
 
       const newApplicants = [...shift.applicants, user.id];
+      const updatePayload: any = { applicants: newApplicants };
+      
+      if (shift.is_negotiable && customPrice) {
+        updatePayload.applicant_proposals = {
+          ...(shift.applicant_proposals || {}),
+          [user.id]: customPrice
+        };
+      }
       
       const { error } = await supabase
         .from('shifts')
-        .update({ applicants: newApplicants })
+        .update(updatePayload)
         .eq('id', shiftId);
         
       if (error) throw error;
@@ -78,6 +88,8 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       });
 
       toast.success(`Has aplicado a la guardia exitosamente.`);
+      setNegotiatingShiftId(null);
+      setProposedPrice('');
       fetchShifts(); // Refresh data
     } catch (error) {
       console.error("Error applying to shift:", error);
@@ -91,10 +103,18 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       if (!shift) return;
 
       const newApplicants = shift.applicants.filter(id => id !== user.id);
+      
+      const updatePayload: any = { applicants: newApplicants };
+      
+      if (shift.applicant_proposals && shift.applicant_proposals[user.id]) {
+        const newProposals = { ...shift.applicant_proposals };
+        delete newProposals[user.id];
+        updatePayload.applicant_proposals = newProposals;
+      }
 
       const { error } = await supabase
         .from('shifts')
-        .update({ applicants: newApplicants })
+        .update(updatePayload)
         .eq('id', shiftId);
 
       if (error) throw error;
@@ -193,7 +213,16 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {groupShifts.map(shift => (
-                    <ShiftCard key={shift.id} shift={shift} onApply={() => handleApply(shift.id)} onRefresh={fetchShifts} />
+                    <ShiftCard 
+                      key={shift.id} 
+                      shift={shift} 
+                      onApply={() => handleApply(shift.id)} 
+                      onNegotiate={() => {
+                        setNegotiatingShiftId(shift.id);
+                        setProposedPrice(shift.price.toString());
+                      }}
+                      onRefresh={fetchShifts} 
+                    />
                   ))}
                 </div>
               </div>
@@ -230,6 +259,51 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         </div>
       )}
 
+      {negotiatingShiftId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden p-6 relative">
+            <button onClick={() => setNegotiatingShiftId(null)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+              <XCircle className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Ofertar nuevo precio</h2>
+            <p className="text-sm text-gray-600 mb-6">Esta institución activó la negociación para esta guardia. Ingresa el honorario por el cual estarías dispuesto a cubrirla.</p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Precio propuesto ($ ARS)</label>
+              <input 
+                type="number" 
+                value={proposedPrice}
+                onChange={(e) => setProposedPrice(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-lg font-medium" 
+                placeholder="Ej: 180000"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setNegotiatingShiftId(null)}
+                className="flex-1 py-2 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  const price = Number(proposedPrice);
+                  if (price > 0) {
+                    handleApply(negotiatingShiftId, price);
+                  } else {
+                    toast.error('Por favor ingresa un precio válido');
+                  }
+                }}
+                className="flex-1 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              >
+                Ofrecer y Postularse
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeChat && (
         <ChatModal 
           shiftId={activeChat.shiftId}
@@ -243,7 +317,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   );
 }
 
-function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, onOpenChat?: () => void, isMyShift?: boolean, userId?: string }) {
+function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegotiate, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, onOpenChat?: () => void, onNegotiate?: () => void, isMyShift?: boolean, userId?: string }) {
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
   
@@ -348,8 +422,15 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, isMyShif
           </div>
           <div className="flex items-center gap-2 font-medium text-gray-900 pt-1">
             <DollarSign className="w-4 h-4 text-green-600" />
-            <span>${shift.price.toLocaleString('es-AR')}</span>
+            <span>${shift.price.toLocaleString('es-AR')} {shift.is_negotiable && <span className="text-xs text-gray-500 font-normal ml-1">(Apto a negociar)</span>}</span>
           </div>
+          {isMyShift && shift.applicant_proposals?.[userId!] && (
+            <div className="flex items-center gap-2 font-medium pt-1">
+              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                Tu oferta: ${shift.applicant_proposals[userId!].toLocaleString('es-AR')}
+              </span>
+            </div>
+          )}
         </div>
 
         {shift.requirements.length > 0 && (
@@ -391,13 +472,23 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, isMyShif
 
       <div className="p-4 bg-gray-50 border-t border-gray-200 mt-auto">
         {!isMyShift ? (
-          <button 
-            onClick={onApply}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-          >
-            Aplicar a Oportunidad
-            <ChevronRight className="w-4 h-4" />
-          </button>
+          shift.is_negotiable && onNegotiate ? (
+            <button 
+              onClick={onNegotiate}
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              Postular y Ofrecer Precio
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button 
+              onClick={onApply}
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              Aplicar a Oportunidad
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col items-center justify-center gap-1 text-sm font-medium w-full">

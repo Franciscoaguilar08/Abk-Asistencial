@@ -50,6 +50,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       specialty: formData.get('specialty') as string,
       type: formData.get('type') as string,
       price: Number(formData.get('price')),
+      is_negotiable: formData.get('is_negotiable') === 'on',
       date: new Date(formData.get('date') as string).toISOString().split('T')[0],
       start_time: formData.get('startTime') as string,
       end_time: formData.get('endTime') as string,
@@ -198,6 +199,11 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Honorarios ($ ARS)</label>
                   <input type="number" name="price" required placeholder="Ej: 150000" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  
+                  <label className="flex items-center gap-2 mt-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" name="is_negotiable" className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                    Apto a negociación (los postulantes pueden hacer ofertas)
+                  </label>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
@@ -406,7 +412,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
           </div>
           <div className="flex items-center gap-2 col-span-2 font-medium text-gray-900 pt-1">
             <DollarSign className="w-4 h-4 text-green-600" />
-            <span>${shift.price.toLocaleString('es-AR')}</span>
+            <span>${shift.price.toLocaleString('es-AR')} {shift.is_negotiable && <span className="text-xs text-gray-500 font-normal ml-1">(Negociable)</span>}</span>
           </div>
         </div>
       </div>
@@ -533,6 +539,11 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
                         </div>
                       )}
                     </div>
+                    {shift.is_negotiable && shift.applicant_proposals?.[applicant.id] && (
+                      <div className="mt-1 text-xs font-semibold text-green-700 bg-green-50 inline-block px-2 py-0.5 rounded">
+                        Oferta: ${shift.applicant_proposals[applicant.id].toLocaleString('es-AR')}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button 

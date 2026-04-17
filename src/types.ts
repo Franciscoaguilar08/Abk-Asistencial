@@ -38,8 +38,10 @@ export interface Shift {
   equipment_available?: string[];
   contact_person?: string;
   price: number;
+  is_negotiable?: boolean; // Indicates if the price can be negotiated
   status: ShiftStatus;
   applicants: string[]; // array of doctor IDs
+  applicant_proposals?: Record<string, number>; // Maps doctor ID to proposed price
   assigned_doctor_id?: string;
   attendance_confirmed?: boolean; // Confirmación 24hs antes
   rating_for_doctor?: number; // 1 to 5, given by clinic
