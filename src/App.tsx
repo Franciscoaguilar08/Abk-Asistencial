@@ -6,6 +6,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { User } from './types';
 import Landing from './pages/Landing';
@@ -167,6 +168,7 @@ export default function App() {
           </a>
         )}
       </div>
+      <Analytics />
     </Router>
   );
 }
