@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { User } from './types';
 import Landing from './pages/Landing';
+import Profile from './pages/Profile';
 import DoctorDashboard from './pages/DoctorDashboard';
 import ClinicDashboard from './pages/ClinicDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -139,6 +140,16 @@ export default function App() {
             <Route 
               path="/admin" 
               element={<AdminDashboard currentUser={currentUser} />} 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                currentUser ? (
+                  <Profile user={currentUser} onProfileUpdate={(u) => setCurrentUser(u)} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } 
             />
           </Routes>
         </main>

@@ -6,6 +6,8 @@ export interface User {
   role: Role;
   email: string;
   avatar?: string;
+  phone?: string;
+  bio?: string; // Para CV de médicos o descripción de clínicas
   dni?: string; // Para profesionales
   license_number?: string; // Matrícula
   jurisdiction?: string; // Jurisdicción de la matrícula
@@ -34,6 +36,7 @@ export interface Shift {
   end_time: string;
   location: string;
   zone?: string; // e.g., 'CABA', 'GBA Norte', 'GBA Sur'
+  description?: string; // Long visual description
   requirements: string[];
   equipment_available?: string[];
   contact_person?: string;

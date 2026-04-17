@@ -7,6 +7,7 @@ import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
+import ViewProfileModal from '../components/ViewProfileModal';
 
 interface ClinicDashboardProps {
   user: User;
@@ -17,9 +18,27 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
+  const [viewedProfileData, setViewedProfileData] = useState<User | null>(null);
+
+  const fetchProfileData = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+      if (error) throw error;
+      setViewedProfileData(data as User);
+    } catch (err) {
+      toast.error('No se pudo cargar el perfil');
+    }
+  };
 
   useEffect(() => {
     fetchShifts();
+    
+    // Auto-refresh periodically to keep data "live" without requiring manual reload
+    const interval = setInterval(() => {
+      fetchShifts();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [user.id]);
 
   const fetchShifts = async () => {
@@ -49,6 +68,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       category: formData.get('category') as 'guardia' | 'evento',
       specialty: formData.get('specialty') as string,
       type: formData.get('type') as string,
+      description: formData.get('description') as string,
       price: Number(formData.get('price')),
       is_negotiable: formData.get('is_negotiable') === 'on',
       date: new Date(formData.get('date') as string).toISOString().split('T')[0],
@@ -91,6 +111,15 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         
       if (error) throw error;
       
+      // Optimitic update
+      setShifts(prevShifts => 
+        prevShifts.map(s => 
+          s.id === shiftId 
+            ? { ...s, assigned_doctor_id: doctorId, status: 'confirmed' } 
+            : s
+        )
+      );
+
       // Crear notificación para el profesional
       await supabase.from('notifications').insert({
         user_id: doctorId,
@@ -117,6 +146,12 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
 
         if (error) throw error;
         
+        setShifts(prevShifts => 
+          prevShifts.map(s => 
+            s.id === shiftId ? { ...s, status: 'cancelled' } : s
+          )
+        );
+
         toast.success('Publicación eliminada exitosamente');
         fetchShifts();
     } catch (error) {
@@ -156,6 +191,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
               onCancel={() => handleCancel(shift.id)}
               onRefresh={fetchShifts}
               onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
+              onViewProfile={fetchProfileData}
             />
           ))
         ) : (
@@ -166,6 +202,10 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
           </div>
         )}
       </div>
+
+      {viewedProfileData && (
+        <ViewProfileModal user={viewedProfileData} onClose={() => setViewedProfileData(null)} />
+      )}
 
       {/* Basic Modal for Creating Shift */}
       {isModalOpen && (
@@ -228,6 +268,11 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo / Descripción breve</label>
                   <input type="text" name="type" required placeholder="Ej: Guardia 24hs, Cobertura Torneo..." className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descripción detallada</label>
+                  <textarea name="description" placeholder="Describa los detalles de la oferta. Ej: Se necesita cubrir guardia en sector pediatría de baja complejidad. 10 camas..." className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"></textarea>
+                  <p className="text-xs text-gray-500 mt-1">Acá podés dar importancia y explicar bien de qué trata la propuesta.</p>
+                </div>
               </div>
               
               <div className="border-t border-gray-200 pt-4 mt-2 space-y-4">
@@ -289,7 +334,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   );
 }
 
-function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void, onOpenChat: (docId: string, docName: string) => void }) {
+function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onViewProfile }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void, onOpenChat: (docId: string, docName: string) => void, onViewProfile: (userId: string) => void }) {
   const isConfirmed = shift.status === 'confirmed' || shift.status === 'completed';
   const isCancelled = shift.status === 'cancelled';
   const [assignedDoctor, setAssignedDoctor] = useState<User | null>(null);
@@ -300,6 +345,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
   const [ratingVal, setRatingVal] = useState(0);
   const [reviewTxt, setReviewTxt] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   const submitRating = async () => {
     if (ratingVal === 0) {
@@ -377,7 +423,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
           </div>
           {!isConfirmed && (
             <button 
-                onClick={onCancel}
+                onClick={() => setIsCancelModalOpen(true)}
                 className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors border border-transparent hover:border-red-200"
                 title="Eliminar Guardia"
             >
@@ -385,6 +431,12 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
             </button>
           )}
         </div>
+        
+        {shift.description && (
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-gray-800 text-sm italic">
+            "{shift.description}"
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
@@ -431,7 +483,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
                 <UserCircle className="w-8 h-8 text-gray-400" />
               </div>
               <div>
-                <p className="font-bold text-gray-900">{assignedDoctor.name}</p>
+                <button onClick={() => onViewProfile(assignedDoctor.id)} className="font-bold text-gray-900 hover:text-blue-600 transition-colors border-b border-transparent hover:border-blue-600">{assignedDoctor.name}</button>
                 <p className="text-sm text-gray-600">{assignedDoctor.specialty}</p>
                 <div className="flex items-center gap-3 mt-1">
                   <div className="flex items-center gap-1 text-sm text-yellow-600">
@@ -528,7 +580,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
                     <UserCircle className="w-6 h-6 text-gray-400" />
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 text-sm">{applicant.name}</p>
+                    <button onClick={() => onViewProfile(applicant.id)} className="font-medium text-gray-900 text-sm hover:text-blue-600 transition-colors border-b border-transparent hover:border-blue-600">{applicant.name}</button>
                     <div className="flex items-center gap-2 mt-0.5">
                       <div className="flex items-center gap-1 text-xs text-yellow-600">
                         ★ {applicant.rating}
@@ -565,6 +617,34 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
           </div>
         )}
       </div>
+
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">¿Cancelar oportunidad?</h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Estás a punto de eliminar la publicación para <strong>{shift.specialty}</strong>. Si ya hay médicos postulados, se les notificará de la cancelación. Esta acción es irreversible.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setIsCancelModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors border border-gray-200"
+              >
+                No, mantener
+              </button>
+              <button 
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                  onCancel();
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
+              >
+                Sí, cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

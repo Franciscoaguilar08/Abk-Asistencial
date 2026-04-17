@@ -1,11 +1,51 @@
 import { Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface LandingProps {
   onLoginSuccess: (user: User) => void;
+}
+
+const ROLES = [
+  "médicos",
+  "enfermeros",
+  "kinesiólogos",
+  "odontólogos",
+  "paramédicos",
+  "psicólogos",
+  "técnicos",
+  "administrativos"
+];
+
+function TypewriterEffect() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setIndex((prev) => (prev + 1) % ROLES.length);
+    }, 2500); // Change roughly every 2.5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return (
+    <span className="inline-block text-blue-600">
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={index}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+          className="inline-block"
+        >
+          {ROLES[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
 }
 
 export default function Landing({ onLoginSuccess }: LandingProps) {
@@ -60,6 +100,10 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         
         if (data.user && data.user.identities && data.user.identities.length === 0) {
           alert('Esta cuenta ya está registrada. Por favor, inicia sesión.');
+          setMode('login');
+        } else if (!data.session && data.user) {
+          // This happens if "Confirm Email" is still enabled in Supabase settings
+          alert('¡Cuenta creada! Por favor, revisa tu correo electrónico para confirmar tu cuenta y luego inicia sesión. (Si no quieres usar correos, el administrador debe apagar "Confirm email" en Supabase).');
           setMode('login');
         }
       } else {
@@ -117,11 +161,14 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight"
+              className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight flex flex-col items-center"
             >
-              Encontrá o cubrí <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                guardias médicas en minutos
+              <span className="mb-2">Encontrá o cubrí</span>
+              <span className="flex flex-col md:flex-row items-center md:gap-3">
+                <span className="shrink-0">trabajos para</span>
+                <div className="text-center md:text-left mt-2 md:mt-0 min-w-[280px] md:min-w-[400px]">
+                  <TypewriterEffect />
+                </div>
               </span>
             </motion.h1>
             
@@ -131,7 +178,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               transition={{ delay: 0.1 }}
               className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed"
             >
-              Conectamos profesionales de la salud con instituciones que necesitan resolver guardias y coberturas de forma rápida, confiable y verificada.
+              Conectamos talento del sector salud con instituciones y productoras que necesitan resolver guardias y coberturas de forma rápida, confiable y verificada.
             </motion.p>
             
             <motion.div 

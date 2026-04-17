@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import ViewProfileModal from '../components/ViewProfileModal';
 import { User, Shift } from '../types';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -16,14 +17,35 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   const [activeTab, setActiveTab] = useState<'available' | 'my-shifts'>('available');
   const [selectedZone, setSelectedZone] = useState<string>('Todas');
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('Todas');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Todas');
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
+  const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
+  const [viewedProfileData, setViewedProfileData] = useState<User | null>(null);
+
+  const fetchProfileData = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+      if (error) throw error;
+      setViewedProfileData(data as User);
+      setViewedProfileId(userId);
+    } catch (err) {
+      toast.error('No se pudo cargar el perfil');
+    }
+  };
   const [negotiatingShiftId, setNegotiatingShiftId] = useState<string | null>(null);
   const [proposedPrice, setProposedPrice] = useState<string>('');
 
   useEffect(() => {
     fetchShifts();
+    
+    // Auto-refresh periodically to keep data "live" without requiring manual reload
+    const interval = setInterval(() => {
+      fetchShifts();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchShifts = async () => {
@@ -53,7 +75,8 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   const filteredAvailableShifts = availableShifts.filter(shift => {
     const matchZone = selectedZone === 'Todas' || shift.zone === selectedZone;
     const matchSpecialty = selectedSpecialty === 'Todas' || shift.specialty === selectedSpecialty;
-    return matchZone && matchSpecialty;
+    const matchCategory = selectedCategory === 'Todas' || shift.category === selectedCategory;
+    return matchZone && matchSpecialty && matchCategory;
   });
 
   const handleApply = async (shiftId: string, customPrice?: number) => {
@@ -78,6 +101,15 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         
       if (error) throw error;
       
+      // Optimitic update to make the app feel instant
+      setShifts(prevShifts => 
+        prevShifts.map(s => 
+          s.id === shiftId 
+            ? { ...s, ...updatePayload } 
+            : s
+        )
+      );
+
       // Crear notificación para la clínica
       await supabase.from('notifications').insert({
         user_id: shift.clinic_id,
@@ -119,6 +151,15 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
 
       if (error) throw error;
       
+      // Optimitic update
+      setShifts(prevShifts => 
+        prevShifts.map(s => 
+          s.id === shiftId 
+            ? { ...s, ...updatePayload } 
+            : s
+        )
+      );
+
       toast.success('Has retirado tu postulación exitosamente.');
       fetchShifts();
     } catch (error) {
@@ -168,6 +209,15 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
             <span>Filtros:</span>
           </div>
           <div className="flex-1 flex flex-col sm:flex-row gap-3 w-full">
+            <select 
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50 text-sm flex-1 font-semibold text-gray-700"
+            >
+              <option value="Todas">Guardias y Eventos</option>
+              <option value="guardia">Solo Guardias Clínicas</option>
+              <option value="evento">Solo Eventos</option>
+            </select>
             <select 
               value={selectedZone}
               onChange={(e) => setSelectedZone(e.target.value)}
@@ -222,6 +272,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
                         setProposedPrice(shift.price.toString());
                       }}
                       onRefresh={fetchShifts} 
+                      onViewProfile={() => fetchProfileData(shift.clinic_id)}
                     />
                   ))}
                 </div>
@@ -247,6 +298,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
                 onWithdraw={() => handleWithdraw(shift.id)}
                 onRefresh={fetchShifts}
                 onOpenChat={() => setActiveChat({ shiftId: shift.id, receiverId: shift.clinic_id, receiverName: shift.clinic_name })}
+                onViewProfile={() => fetchProfileData(shift.clinic_id)}
               />
             ))
           ) : (
@@ -257,6 +309,10 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
             </div>
           )}
         </div>
+      )}
+
+      {viewedProfileData && (
+        <ViewProfileModal user={viewedProfileData} onClose={() => setViewedProfileData(null)} />
       )}
 
       {negotiatingShiftId && (
@@ -317,7 +373,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   );
 }
 
-function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegotiate, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, onOpenChat?: () => void, onNegotiate?: () => void, isMyShift?: boolean, userId?: string }) {
+function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegotiate, onViewProfile, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, onOpenChat?: () => void, onNegotiate?: () => void, onViewProfile?: () => void, isMyShift?: boolean, userId?: string }) {
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
   
@@ -327,6 +383,7 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
   const [ratingVal, setRatingVal] = useState(0);
   const [reviewTxt, setReviewTxt] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
   const submitRating = async () => {
     if (ratingVal === 0) {
@@ -383,7 +440,12 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
                 {shift.category === 'evento' ? 'Evento' : 'Guardia Clínica'}
               </span>
             </div>
-            <h3 className="font-bold text-lg text-gray-900 leading-tight">{shift.clinic_name}</h3>
+            <button onClick={onViewProfile} className="text-left group mb-1 block">
+              <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors leading-tight flex items-center gap-1">
+                {shift.clinic_name}
+                <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </h3>
+            </button>
             <p className="text-sm font-medium text-gray-600">{shift.specialty}</p>
           </div>
           {isMyShift && (
@@ -397,6 +459,11 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
         </div>
 
         <div className="space-y-2 text-sm text-gray-600">
+          {shift.description && (
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-gray-800 text-sm italic mb-2">
+              "{shift.description}"
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-gray-400" />
             <span className="capitalize">{format(new Date(shift.date), "EEEE d 'de' MMMM", { locale: es })}</span>
@@ -512,7 +579,7 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
 
             {isPending && onWithdraw && (
               <button 
-                onClick={onWithdraw}
+                onClick={() => setIsWithdrawModalOpen(true)}
                 className="mt-2 w-full py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-sm font-medium transition-colors"
               >
                 Retirar postulación
@@ -600,6 +667,34 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
           </div>
         )}
       </div>
+
+      {isWithdrawModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">¿Estás seguro?</h3>
+            <p className="text-gray-600 text-sm mb-6">
+              Estás a punto de retirar tu postulación para <strong>{shift.specialty}</strong> en <strong>{shift.clinic_name}</strong>. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setIsWithdrawModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors border border-gray-200"
+              >
+                No, mantener
+              </button>
+              <button 
+                onClick={() => {
+                  setIsWithdrawModalOpen(false);
+                  onWithdraw!();
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
+              >
+                Sí, retirar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -17,6 +17,11 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
     if (!currentUser) return;
 
     fetchNotifications();
+    
+    // Auto-refresh periodically to keep notifications "live"
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 10000);
 
     const channel = supabase
       .channel(`notifications_${currentUser.id}`)
@@ -25,12 +30,14 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${currentUser.id}` },
         (payload) => {
           const newNotif = payload.new as AppNotification;
-          setNotifications(prev => [newNotif, ...prev]);
+          // Only add if it doesn't exist yet (in case both websocket and polling catch it)
+          setNotifications(prev => prev.some(n => n.id === newNotif.id) ? prev : [newNotif, ...prev]);
         }
       )
       .subscribe();
 
     return () => {
+      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, [currentUser]);
@@ -122,20 +129,22 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-600 border-l border-gray-200 pl-4">
-                {currentUser.avatar ? (
-                  <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
-                    <UserIcon className="w-4 h-4 text-gray-500" />
-                  </div>
-                )}
-                <span className="font-medium hidden sm:inline-flex items-center gap-1">
-                  {currentUser.name}
-                  {currentUser.verification_status === 'verified' && (
-                    <span title="Cuenta verificada"><ShieldCheck className="w-4 h-4 text-blue-600" /></span>
+                <Link to="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                  {currentUser.avatar ? (
+                    <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center border border-blue-200">
+                      <UserIcon className="w-4 h-4 text-blue-600" />
+                    </div>
                   )}
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium capitalize hidden sm:inline-block">
+                  <span className="font-medium hidden sm:inline-flex items-center gap-1 text-gray-900 border-b border-transparent hover:border-blue-600">
+                    {currentUser.name}
+                    {currentUser.verification_status === 'verified' && (
+                      <span title="Cuenta verificada"><ShieldCheck className="w-4 h-4 text-blue-600" /></span>
+                    )}
+                  </span>
+                </Link>
+                <span className="px-2 py-0.5 ml-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium capitalize hidden sm:inline-block">
                   {currentUser.role === 'clinic' ? 'Institución' : 'Profesional'}
                 </span>
               </div>

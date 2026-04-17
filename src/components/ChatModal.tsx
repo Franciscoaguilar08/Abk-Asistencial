@@ -73,14 +73,32 @@ export default function ChatModal({ shiftId, currentUserId, receiverId, receiver
     setNewMessage(''); // optimistic clear
 
     try {
-      const { error } = await supabase.from('messages').insert({
+      const { data: newMsg, error } = await supabase.from('messages').insert({
         shift_id: shiftId,
         sender_id: currentUserId,
         receiver_id: receiverId,
         content: msgContent
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Create a notification for the receiver
+      await supabase.from('notifications').insert({
+        user_id: receiverId,
+        title: 'Nuevo mensaje',
+        message: 'Has recibido un nuevo mensaje en el chat de la guardia.',
+        type: 'message',
+        shift_id: shiftId
+      });
+      
+      // Update local state immediately so we don't depend entirely on the WebSocket
+      if (newMsg) {
+        setMessages((prev) => {
+          // Prevent duplicates if websocket *does* fire
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg as Message];
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Error al enviar mensaje');
