@@ -234,7 +234,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
                   <Stethoscope className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Médicos freelance</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">Profesionales freelance</h3>
                 <p className="text-gray-600">Para encontrar guardias y oportunidades laborales de forma más simple, clara y ordenada.</p>
               </div>
             </div>
@@ -276,7 +276,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           <div className="max-w-6xl mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold mb-6">Más seguridad para trabajar mejor</h2>
             <p className="text-blue-100 text-lg max-w-2xl mx-auto mb-12">
-              Perfiles profesionales, datos organizados y un sistema pensado para dar más transparencia al vínculo entre instituciones y médicos.
+              Perfiles profesionales, datos organizados y un sistema pensado para dar más transparencia al vínculo entre instituciones y profesionales.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <span className="flex items-center gap-2 bg-blue-800/50 border border-blue-700 px-4 py-2 rounded-full font-medium">
@@ -297,7 +297,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-4xl font-extrabold text-gray-900 mb-6">Empezá hoy</h2>
             <p className="text-lg text-gray-600 mb-10">
-              Ya seas médico o institución, la plataforma está pensada para hacer más simple la cobertura de guardias y oportunidades.
+              Ya seas profesional o institución, la plataforma está pensada para hacer más simple la cobertura de guardias y oportunidades.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button onClick={() => openAuth('register', 'doctor')} className="px-8 py-4 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition shadow-md">
@@ -352,7 +352,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                     {mode === 'register' && !selectedRole && (
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         <button type="button" onClick={() => setSelectedRole('doctor')} className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 ${selectedRole === 'doctor' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                          <Stethoscope className="w-6 h-6" /> <span className="text-sm font-bold">Médico</span>
+                          <Stethoscope className="w-6 h-6" /> <span className="text-sm font-bold">Profesional</span>
                         </button>
                         <button type="button" onClick={() => setSelectedRole('clinic')} className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 ${selectedRole === 'clinic' ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                           <Building2 className="w-6 h-6" /> <span className="text-sm font-bold">Institución</span>

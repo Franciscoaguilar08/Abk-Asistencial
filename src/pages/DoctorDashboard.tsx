@@ -116,7 +116,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Hola, {user.name}</h1>
-          <p className="text-gray-600">Encuentra tu próxima guardia o evento médico</p>
+          <p className="text-gray-600">Encuentra tu próxima guardia o evento asistencial</p>
         </div>
         
         <div className="flex bg-gray-100 p-1 rounded-lg">

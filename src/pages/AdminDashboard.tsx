@@ -74,7 +74,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
             <h3 className="font-semibold text-gray-700">Total Usuarios</h3>
           </div>
           <p className="text-3xl font-bold">{users.length}</p>
-          <p className="text-sm text-gray-500 mt-1">{doctors.length} Médicos | {clinics.length} Clínicas</p>
+          <p className="text-sm text-gray-500 mt-1">{doctors.length} Profesionales | {clinics.length} Clínicas</p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -89,7 +89,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <Activity className="w-5 h-5 text-yellow-500" />
-            <h3 className="font-semibold text-gray-700">Buscando Médico</h3>
+            <h3 className="font-semibold text-gray-700">Buscando Profesional</h3>
           </div>
           <p className="text-3xl font-bold text-yellow-600">{activeShifts.length}</p>
           <p className="text-sm text-gray-500 mt-1">En estado "open"</p>
@@ -101,7 +101,7 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
             <h3 className="font-semibold text-gray-700">Guardias "Match"</h3>
           </div>
           <p className="text-3xl font-bold text-green-600">{confirmedShifts.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Con médico asignado</p>
+          <p className="text-sm text-gray-500 mt-1">Con profesional asignado</p>
         </div>
       </div>
 

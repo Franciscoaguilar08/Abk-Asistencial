@@ -136,7 +136,7 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                   )}
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium capitalize hidden sm:inline-block">
-                  {currentUser.role === 'clinic' ? 'Institución' : 'Médico'}
+                  {currentUser.role === 'clinic' ? 'Institución' : 'Profesional'}
                 </span>
               </div>
               <button

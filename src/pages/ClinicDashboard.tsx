@@ -90,7 +90,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         
       if (error) throw error;
       
-      // Crear notificación para el médico
+      // Crear notificación para el profesional
       await supabase.from('notifications').insert({
         user_id: doctorId,
         title: '¡Guardia Confirmada!',
@@ -99,11 +99,11 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         shift_id: shiftId
       });
 
-      toast.success('Médico asignado exitosamente');
+      toast.success('Profesional asignado exitosamente');
       fetchShifts();
     } catch (error) {
       console.error("Error assigning doctor:", error);
-      toast.error("Error al asignar médico.");
+      toast.error("Error al asignar profesional.");
     }
   };
 
@@ -193,7 +193,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Especialidad / Rol requerido</label>
-                  <input type="text" name="specialty" required placeholder="Ej: Pediatría, Médico General..." className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input type="text" name="specialty" required placeholder="Ej: Pediatría, Kinesiología, Odontología..." className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Honorarios ($ ARS)</label>
@@ -239,7 +239,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 <h3 className="text-sm font-bold text-gray-900 mt-4">Detalles Adicionales</h3>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Requisitos Médicos</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Requisitos del Profesional</label>
                   <textarea name="requirements" placeholder="Ej: Matrícula Nacional, Especialidad completa, Seguro de mala praxis..." className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2}></textarea>
                   <p className="text-xs text-gray-500 mt-1">Separe los requisitos con comas.</p>
                 </div>
@@ -357,7 +357,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
                 "inline-block px-2.5 py-1 rounded-full text-xs font-semibold",
                 isConfirmed ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
               )}>
-                {isConfirmed ? 'Asignada' : 'Buscando Médico'}
+                {isConfirmed ? 'Asignada' : 'Buscando Profesional'}
               </span>
               <span className={cn(
                 "inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider",
@@ -415,7 +415,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
       <div className="p-6 md:w-1/2 bg-gray-50 flex flex-col">
         <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Users className="w-5 h-5 text-gray-500" />
-          {isConfirmed ? 'Médico Asignado' : `Postulantes (${shift.applicants.length})`}
+          {isConfirmed ? 'Profesional Asignado' : `Postulantes (${shift.applicants.length})`}
         </h4>
 
         {isConfirmed && assignedDoctor ? (
@@ -474,7 +474,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
                    <div className="space-y-2">
                      <h5 className="font-semibold text-gray-900 flex items-center gap-2">
                         <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                        Calificaste a este médico
+                        Calificaste a este profesional
                      </h5>
                      <div className="flex gap-1">
                        {[1,2,3,4,5].map(star => (
@@ -485,7 +485,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
                    </div>
                 ) : (
                   <div className="space-y-3">
-                    <h5 className="font-semibold text-gray-900">Evalúa al médico</h5>
+                    <h5 className="font-semibold text-gray-900">Evalúa al profesional</h5>
                     <p className="text-xs text-gray-600">24hs después de la fecha de la guardia, puedes calificar el desempeño para mantener la calidad de la red.</p>
                     <div className="flex gap-1">
                       {[1,2,3,4,5].map(star => (
@@ -549,7 +549,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat }: {
             <Users className="w-10 h-10 text-gray-300 mb-2" />
             <p className="font-medium text-gray-900">Aún no hay postulantes</p>
             <p className="text-sm mt-1 max-w-[250px]">
-              Te notificaremos cuando un médico se postule. Al aceptar a un médico, le compartiremos tus datos para coordinar.
+              Te notificaremos cuando un profesional se postule. Al aceptar a un profesional, le compartiremos tus datos para coordinar.
             </p>
           </div>
         )}
