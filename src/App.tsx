@@ -56,7 +56,7 @@ export default function App() {
       if (error && error.code === 'PGRST116') {
         const newUser = {
           id: userId,
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuario',
+          name: session.user.user_metadata?.name || '',
           email: session.user.email,
           role: session.user.user_metadata?.role || 'doctor',
           ...(session.user.user_metadata?.role === 'doctor' ? { rating: 5.0, completion_rate: 100 } : {})

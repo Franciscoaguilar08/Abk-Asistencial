@@ -54,7 +54,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           email,
           password,
           options: {
-            data: { role: selectedRole, name: email.split('@')[0] }
+            data: { role: selectedRole }
           }
         });
 
