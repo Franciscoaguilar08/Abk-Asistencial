@@ -170,21 +170,45 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {activeTab === 'available' ? (
-          filteredAvailableShifts.length > 0 ? (
-            filteredAvailableShifts.map(shift => (
-              <ShiftCard key={shift.id} shift={shift} onApply={() => handleApply(shift.id)} onRefresh={fetchShifts} />
-            ))
-          ) : (
-            <div className="col-span-full py-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200 border-dashed">
-              <BriefcaseMedical className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-              <p className="text-lg font-medium text-gray-900">No hay oportunidades nuevas</p>
-              <p>Pronto se publicarán nuevas guardias. Modifica los filtros para ver más.</p>
-            </div>
-          )
+      {activeTab === 'available' ? (
+        filteredAvailableShifts.length > 0 ? (
+          <div className="space-y-8">
+            {Object.entries(
+              filteredAvailableShifts.reduce((acc, shift) => {
+                const clinicName = shift.clinic_name || 'Institución sin nombre';
+                if (!acc[clinicName]) acc[clinicName] = [];
+                acc[clinicName].push(shift);
+                return acc;
+              }, {} as Record<string, Shift[]>)
+            ).map(([clinicName, groupShifts]) => (
+              <div key={clinicName} className="space-y-4">
+                <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800">{clinicName}</h3>
+                  <span className="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-full font-medium">
+                    {groupShifts.length} {groupShifts.length === 1 ? 'publicación' : 'publicaciones'}
+                  </span>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {groupShifts.map(shift => (
+                    <ShiftCard key={shift.id} shift={shift} onApply={() => handleApply(shift.id)} onRefresh={fetchShifts} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
-          myShifts.length > 0 ? (
+          <div className="py-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200 border-dashed">
+            <BriefcaseMedical className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+            <p className="text-lg font-medium text-gray-900">No hay oportunidades nuevas</p>
+            <p>Pronto se publicarán nuevas guardias. Modifica los filtros para ver más.</p>
+          </div>
+        )
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {myShifts.length > 0 ? (
             myShifts.map(shift => (
               <ShiftCard 
                 key={shift.id} 
@@ -202,9 +226,9 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
               <p className="text-lg font-medium text-gray-900">No tienes coberturas activas</p>
               <p>Aplica a oportunidades disponibles para verlas aquí.</p>
             </div>
-          )
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {activeChat && (
         <ChatModal 

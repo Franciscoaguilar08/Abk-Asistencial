@@ -132,7 +132,7 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                 <span className="font-medium hidden sm:inline-flex items-center gap-1">
                   {currentUser.name}
                   {currentUser.verification_status === 'verified' && (
-                    <ShieldCheck className="w-4 h-4 text-blue-600" title="Cuenta verificada" />
+                    <span title="Cuenta verificada"><ShieldCheck className="w-4 h-4 text-blue-600" /></span>
                   )}
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium capitalize hidden sm:inline-block">
