@@ -15,7 +15,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const scrollTo = (id: string) => {
@@ -26,7 +25,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
     setMode(initialMode);
     if (role) setSelectedRole(role);
     setShowAuthModal(true);
-    setEmailSent(false);
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -63,8 +61,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         if (data.user && data.user.identities && data.user.identities.length === 0) {
           alert('Esta cuenta ya está registrada. Por favor, inicia sesión.');
           setMode('login');
-        } else {
-          setEmailSent(true);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -339,17 +335,8 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                   </button>
                 </div>
 
-                {emailSent ? (
-                  <div className="text-center space-y-4 py-8">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Mail className="w-8 h-8 text-green-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900">¡Revisa tu correo!</h3>
-                    <p className="text-gray-600 text-sm">Validá tu email haciendo clic en el enlace que enviamos a <strong>{email}</strong>.</p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleAuthSubmit} className="space-y-5">
-                    {mode === 'register' && !selectedRole && (
+                <form onSubmit={handleAuthSubmit} className="space-y-5">
+                  {mode === 'register' && !selectedRole && (
                       <div className="grid grid-cols-2 gap-3 mb-4">
                         <button type="button" onClick={() => setSelectedRole('doctor')} className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 ${selectedRole === 'doctor' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                           <Stethoscope className="w-6 h-6" /> <span className="text-sm font-bold">Profesional</span>
@@ -390,7 +377,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                       </button>
                     </div>
                   </form>
-                )}
               </div>
             </motion.div>
           </motion.div>
