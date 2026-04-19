@@ -294,10 +294,10 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-blue-600" />
-                    <h4 className="font-bold text-gray-900">Validación de Identidad y Matrícula</h4>
+                    <h4 className="font-bold text-gray-900">Certificación de Matrícula <span className="text-blue-600 ml-2 text-xs font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Opcional en Beta</span></h4>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Para certificar tu cuenta y poder postularte, adjunta una captura de tu <strong>Matrícula Digital</strong> desde la app <strong>Mi Argentina</strong>.
+                    Aunque estamos en <strong>Fase Beta</strong> y tu cuenta ya está activa, podés ir cargando la captura de tu <strong>Matrícula Digital</strong> (app Mi Argentina) para ir completando tu perfil profesional oficial.
                   </p>
 
                   {formData.license_image_url ? (

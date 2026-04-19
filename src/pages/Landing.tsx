@@ -193,7 +193,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         name: sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || 'Usuario',
         email: sessionUser.email,
         role: selectedRole,
-        verification_status: 'pending'
+        verification_status: 'verified' // Auto-verify in Beta Phase
       };
 
       const { data, error } = await supabase

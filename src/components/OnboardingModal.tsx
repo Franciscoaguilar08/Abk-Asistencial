@@ -34,7 +34,7 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
     try {
       const updatePayload: Partial<User> = {
         name: formData.name,
-        verification_status: 'pending',
+        verification_status: 'verified', // Auto-verify in Beta Phase
       };
 
       if (user.role === 'doctor') {
@@ -55,7 +55,7 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
         
       if (error) throw error;
 
-      toast.success('¡Datos enviados correctamente! Tu perfil está siendo revisado.');
+      toast.success('¡Perfil activado! Gracias por sumarte a la Fase Beta. Ya podés operar sin restricciones.');
       onComplete(data as User);
     } catch (error) {
       console.error('Error submitting data:', error);
@@ -70,27 +70,22 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative overflow-hidden">
         {user.verification_status === 'pending' ? (
           <div className="py-8 flex flex-col items-center justify-center text-center space-y-6">
-            <div className="bg-yellow-100 text-yellow-600 p-4 rounded-full">
-              <Clock className="w-12 h-12" />
+            <div className="bg-green-100 text-green-600 p-4 rounded-full">
+              <ShieldCheck className="w-12 h-12" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-bold">Perfil en Revisión</h3>
+              <h3 className="text-2xl font-bold">¡Activación Beta Disponible!</h3>
               <p className="text-gray-600 leading-relaxed">
-                Gracias por completar tus datos. {user.role === 'doctor' 
-                  ? `Tu matrícula (${user.license_number})` 
-                  : user.cuit === 'N/A' 
-                    ? 'Tu perfil institucional' 
-                    : `Tu CUIT (${user.cuit})`} está siendo verificado manualmente por nuestro equipo de seguridad. 
+                Estamos en <strong>Fase Beta</strong>. Ya no necesitás esperar la validación manual para empezar a usar ABK.
               </p>
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm text-gray-500 mt-4">
-                Recibirás una notificación en tu correo cuando tu perfil sea aprobado para empezar a {user.role === 'doctor' ? 'postularte a guardias' : 'publicar oportunidades'}.
-              </div>
             </div>
             <button 
-              onClick={() => window.location.reload()} 
-              className="text-sm text-blue-600 font-semibold hover:underline"
+              onClick={handleSubmit} 
+              disabled={loading}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-200"
             >
-              Actualizar estado
+              {loading ? 'Activando...' : 'Activar mi cuenta ahora'}
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         ) : (
@@ -100,11 +95,11 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
             {user.role === 'doctor' ? <FileCheck2 className="w-8 h-8" /> : <Building2 className="w-8 h-8" />}
           </div>
           <div>
-            <h2 className="text-xl font-bold">Validación de Datos</h2>
+            <h2 className="text-xl font-bold">Registro Fase Beta</h2>
             <p className="text-sm text-gray-600 mt-1 leading-relaxed text-left">
               {user.role === 'doctor' 
-                ? 'Para garantizar la seguridad de la red, un administrador revisará tu matrícula profesional manualmente antes de permitirte postularte.'
-                : 'Para publicar guardias, validamos la existencia legal de tu institución.'}
+                ? 'Completá tus datos básicos para empezar. Durante este mes de prueba, la verificación es instantánea para que puedas testear la red.'
+                : 'Para publicar guardias durante la beta, solo necesitamos identificar tu institución.'}
             </p>
           </div>
         </div>
@@ -184,10 +179,10 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
               disabled={loading}
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
-              {loading ? 'Enviando...' : 'Enviar para Revisión'}
+              {loading ? 'Preparando...' : 'Activar Perfil Beta'}
               {!loading && <ChevronRight className="w-5 h-5" />}
             </button>
-            <p className="text-[10px] text-gray-400 text-center mt-3 uppercase tracking-wider">Tus datos serán revisados manualmente por el equipo de ABK</p>
+            <p className="text-[10px] text-blue-600 font-bold text-center mt-3 uppercase tracking-wider">Verificación instantánea habilitada por tiempo limitado</p>
           </div>
         </form>
           </>
