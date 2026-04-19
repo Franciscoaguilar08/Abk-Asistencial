@@ -76,11 +76,22 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <div className="flex items-center">
+          <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
               <Activity className="h-8 w-8" />
               <span className="font-bold text-xl tracking-tight">Abk Asistencial</span>
             </Link>
+            
+            {currentUser && (
+              <nav className="hidden md:flex items-center gap-6 border-l border-gray-100 ml-4 pl-6">
+                <Link to="/" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
+                  {currentUser.role === 'doctor' ? 'Buscar Guardias' : 'Mis Publicaciones'}
+                </Link>
+                <Link to="/profile" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
+                  Mi Perfil
+                </Link>
+              </nav>
+            )}
           </div>
           
           {currentUser && (

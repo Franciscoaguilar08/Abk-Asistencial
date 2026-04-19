@@ -1,5 +1,9 @@
-import { X, UserCircle, Phone, Mail, Award, MapPin, Building2, BriefcaseMedical, Calendar, FileText, ExternalLink } from 'lucide-react';
+import { X, UserCircle, Phone, Mail, Award, MapPin, Building2, BriefcaseMedical, Calendar, FileText, ExternalLink, Activity } from 'lucide-react';
 import { User, Shift } from '../types';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface ViewProfileModalProps {
   user: User;
@@ -7,6 +11,33 @@ interface ViewProfileModalProps {
 }
 
 export default function ViewProfileModal({ user, onClose }: ViewProfileModalProps) {
+  const [clinicShifts, setClinicShifts] = useState<Shift[]>([]);
+  const [loadingShifts, setLoadingShifts] = useState(false);
+
+  useEffect(() => {
+    if (user.role === 'clinic') {
+      fetchClinicShifts();
+    }
+  }, [user.id]);
+
+  const fetchClinicShifts = async () => {
+    setLoadingShifts(true);
+    try {
+      const { data } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('clinic_id', user.id)
+        .eq('status', 'open')
+        .order('date', { ascending: true });
+      
+      if (data) setClinicShifts(data as Shift[]);
+    } catch (err) {
+      console.error("Error fetching clinic shifts:", err);
+    } finally {
+      setLoadingShifts(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[85vh]">
@@ -122,6 +153,33 @@ export default function ViewProfileModal({ user, onClose }: ViewProfileModalProp
                   Ver CV completo (PDF)
                   <ExternalLink className="w-4 h-4" />
                 </a>
+              </div>
+            )}
+
+            {user.role === 'clinic' && (
+              <div className="pt-4 mt-4 border-t border-gray-100">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Propuestas Activas</h3>
+                {loadingShifts ? (
+                  <p className="text-sm text-gray-400">Cargando propuestas...</p>
+                ) : clinicShifts.length > 0 ? (
+                  <div className="space-y-3">
+                    {clinicShifts.map(s => (
+                      <div key={s.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-sm">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="font-bold text-gray-900">{s.specialty}</p>
+                          <span className="text-xs font-bold text-blue-600">${s.price.toLocaleString('es-AR')}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-gray-500 text-xs mt-2">
+                           <span className="flex items-center gap-1 capitalize"><Calendar className="w-3 h-3" /> {format(new Date(s.date), 'dd/MM', { locale: es })}</span>
+                           <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {s.zone}</span>
+                           <span className="flex items-center gap-1 opacity-75">{s.type}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">Esta institución no tiene propuestas abiertas actualmente.</p>
+                )}
               </div>
             )}
           </div>

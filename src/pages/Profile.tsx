@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
-import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert, Calendar, Upload, FileUp, ExternalLink, Trash2, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert, Calendar, Upload, FileUp, ExternalLink, Trash2, ShieldCheck, Image as ImageIcon, ChevronLeft } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -49,14 +49,14 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
         phone: formData.phone,
         bio: formData.bio,
         availability: formData.availability,
-        cv_url: formData.cv_url,
-        license_image_url: formData.license_image_url,
-        affidavit_accepted: formData.affidavit_accepted,
         ...(user.role === 'doctor' ? {
           dni: formData.dni,
           license_number: formData.license_number,
           jurisdiction: formData.jurisdiction,
-          specialty: formData.specialty
+          specialty: formData.specialty,
+          cv_url: formData.cv_url,
+          license_image_url: formData.license_image_url,
+          affidavit_accepted: formData.affidavit_accepted,
         } : {
           cuit: formData.no_cuit ? 'N/A' : formData.cuit,
           address: formData.address
@@ -169,6 +169,16 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <Link 
+          to="/" 
+          className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Volver al Dashboard
+        </Link>
+      </div>
+
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
           <UserCircle className="w-7 h-7" />
@@ -452,7 +462,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
             <div className="pt-2">
                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
                  <FileText className="w-4 h-4 text-gray-500"/>
-                 {user.role === 'doctor' ? 'Tu CV (Añadí tu experiencia académica y laboral aquí)' : 'Descripción de la Institución'}
+                 {user.role === 'doctor' ? 'Resumen Profesional (Mini-CV)' : 'Descripción de la Institución'}
                </label>
                <textarea 
                   name="bio"
