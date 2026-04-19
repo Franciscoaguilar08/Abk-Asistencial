@@ -55,22 +55,9 @@ export default function App() {
       
       // PGRST116 means no rows returned (user doesn't exist in public.users yet)
       if (error && error.code === 'PGRST116') {
-        const newUser = {
-          id: userId,
-          name: session.user.user_metadata?.name || '',
-          email: session.user.email,
-          role: session.user.user_metadata?.role || 'doctor',
-          ...(session.user.user_metadata?.role === 'doctor' ? { completion_rate: 100 } : {})
-        };
-        
-        const { data: insertedData, error: insertError } = await supabase
-          .from('users')
-          .insert([newUser])
-          .select()
-          .single();
-          
-        if (insertError) throw insertError;
-        setCurrentUser(insertedData as User);
+        // User exists in Auth but not in public.users
+        // Landing page will handle showing the role selection if session exists but profile is missing
+        setCurrentUser(null);
       } else if (error) {
         throw error;
       } else if (data) {

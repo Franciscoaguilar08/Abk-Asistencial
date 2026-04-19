@@ -56,6 +56,47 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showRolePicker, setShowRolePicker] = useState(false);
+  const [sessionUser, setSessionUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        checkProfile(session.user);
+      }
+    };
+
+    checkSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setSessionUser(session.user);
+        checkProfile(session.user);
+      } else {
+        setSessionUser(null);
+        setShowRolePicker(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkProfile = async (authUser: any) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', authUser.id)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      // Session exists but no profile in public.users -> Show role picker
+      setSessionUser(authUser);
+      setShowRolePicker(true);
+    } else if (data) {
+      // Profile exists, App.tsx will handle the redirect
+    }
+  };
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -117,6 +158,57 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
     } catch (error: any) {
       console.error("Auth error", error);
       alert(error.message || "Error al procesar la solicitud. Por favor intenta nuevamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      console.error("Google Auth error", error);
+      alert(error.message || "Error al conectar con Google.");
+      setLoading(false);
+    }
+  };
+
+  const handleCompleteSocialProfile = async () => {
+    if (!selectedRole || !acceptedTerms || !sessionUser) {
+      alert("Debes seleccionar un rol y aceptar los términos.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const newUser = {
+        id: sessionUser.id,
+        name: sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || 'Usuario',
+        email: sessionUser.email,
+        role: selectedRole,
+        verification_status: 'pending'
+      };
+
+      const { data, error } = await supabase
+        .from('users')
+        .insert([newUser])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      setShowRolePicker(false);
+      onLoginSuccess(data as User);
+    } catch (error: any) {
+      console.error("Error creating social profile", error);
+      alert("Error al completar tu perfil.");
     } finally {
       setLoading(false);
     }
@@ -371,6 +463,43 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                   </button>
                 </div>
 
+                <div className="space-y-4 mb-6">
+                  <button
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-3 py-3 border border-gray-300 rounded-xl font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      />
+                    </svg>
+                    Continuar con Google
+                  </button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-gray-200"></span>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-gray-500 font-medium">o con email</span>
+                    </div>
+                  </div>
+                </div>
+
                 <form onSubmit={handleAuthSubmit} className="space-y-5">
                   {mode === 'register' && !selectedRole && (
                       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -413,6 +542,82 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                       </button>
                     </div>
                   </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showRolePicker && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden p-8"
+            >
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">¡Casi listo!</h3>
+              <p className="text-gray-600 mb-6">Solo necesitamos saber cómo vas a usar la plataforma.</p>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedRole('doctor')} 
+                    className={`p-4 border-2 rounded-2xl flex flex-col items-center gap-3 transition-all ${selectedRole === 'doctor' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md ring-2 ring-blue-100' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedRole === 'doctor' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                      <Stethoscope className="w-6 h-6" />
+                    </div>
+                    <span className="text-sm font-bold">Soy profesional</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setSelectedRole('clinic')} 
+                    className={`p-4 border-2 rounded-2xl flex flex-col items-center gap-3 transition-all ${selectedRole === 'clinic' ? 'border-purple-600 bg-purple-50 text-purple-700 shadow-md ring-2 ring-purple-100' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}
+                  >
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedRole === 'clinic' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                    <span className="text-sm font-bold">Soy institución</span>
+                  </button>
+                </div>
+
+                <div className="flex items-start gap-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <input 
+                    type="checkbox" 
+                    id="social-terms" 
+                    required 
+                    checked={acceptedTerms} 
+                    onChange={(e) => setAcceptedTerms(e.target.checked)} 
+                    className="mt-1 w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+                  />
+                  <label htmlFor="social-terms" className="text-sm text-gray-600 leading-relaxed cursor-pointer">
+                    Acepto que ABK Asistencial conecta a profesionales con instituciones y no es responsable de honorarios o mala praxis.
+                  </label>
+                </div>
+
+                <button 
+                  onClick={handleCompleteSocialProfile}
+                  disabled={loading || !selectedRole || !acceptedTerms}
+                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-200 disabled:opacity-50"
+                >
+                  {loading ? 'Preparando todo...' : 'Empezar ahora'}
+                </button>
+                
+                <button 
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    setShowRolePicker(false);
+                  }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700 font-medium"
+                >
+                  Cancelar registro
+                </button>
               </div>
             </motion.div>
           </motion.div>

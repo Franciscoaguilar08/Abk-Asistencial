@@ -113,9 +113,9 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
 
   const tabs = [
     { id: 'pending', label: 'Pendientes', count: pendingUsers.length, alert: pendingUsers.length > 0 },
-    { id: 'users', label: 'Usuarios', count: users.length },
-    { id: 'shifts', label: 'Guardias', count: shifts.length },
-    { id: 'metrics', label: 'Métricas', count: null },
+    { id: 'users', label: 'Usuarios', count: users.length, alert: false },
+    { id: 'shifts', label: 'Guardias', count: shifts.length, alert: false },
+    { id: 'metrics', label: 'Métricas', count: null, alert: false },
   ] as const;
 
   return (
