@@ -6,7 +6,7 @@ import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare, Building2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '../lib/utils';
+import { cn, areShiftsOverlapping } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
 
 interface DoctorDashboardProps {
@@ -81,8 +81,37 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
 
   const handleApply = async (shiftId: string, customPrice?: number) => {
     try {
+      if (user.verification_status !== 'verified') {
+        toast.error('Tu perfil está en proceso de certificación. Podrás postularte una vez que sea validado por nuestro equipo.');
+        return;
+      }
+
       const shift = shifts.find(s => s.id === shiftId);
       if (!shift) return;
+
+      // 1. Verificar superposición con guardias confirmadas
+      const assignedShifts = shifts.filter(s => s.assigned_doctor_id === user.id && s.status === 'confirmed');
+      const overlappingConfirmed = assignedShifts.find(s => areShiftsOverlapping(s, shift));
+      
+      if (overlappingConfirmed) {
+        toast.error(`Conflicto de horario: Ya tienes una guardia confirmada en este horario (${overlappingConfirmed.clinic_name}).`);
+        return;
+      }
+
+      // 2. Límite de postulaciones activas (Máximo 5)
+      const activeAppsCount = shifts.filter(s => s.applicants.includes(user.id) && s.status === 'open').length;
+      if (activeAppsCount >= 5) {
+        toast.error('Límite alcanzado: Solo puedes tener 5 postulaciones activas simultáneamente. Retira una para aplicar a esta.');
+        return;
+      }
+
+      // 3. Verificar superposición con otras postulaciones (opcional, pero ayuda al médico)
+      const myApplications = shifts.filter(s => s.applicants.includes(user.id) && s.status === 'open');
+      const overlappingPending = myApplications.find(s => areShiftsOverlapping(s, shift));
+      
+      if (overlappingPending) {
+        toast.warning(`Aviso: Ya te has postulado a otra guardia que se superpone (${overlappingPending.clinic_name}).`);
+      }
 
       const newApplicants = [...shift.applicants, user.id];
       const updatePayload: any = { applicants: newApplicants };
@@ -202,6 +231,21 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         </div>
       </div>
 
+      {user.verification_status !== 'verified' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-4">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="font-bold text-blue-900">Perfil en Revisión</h3>
+            <p className="text-sm text-blue-700 mt-0.5">
+              Tu cuenta está en proceso de certificación. Puedes navegar por las oportunidades disponibles, 
+              pero la función de postulación se habilitará una vez que hayamos validado tu documentación.
+            </p>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'available' && (
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row gap-4 items-center">
           <div className="flex items-center gap-2 text-gray-700 font-medium w-full sm:w-auto">
@@ -266,6 +310,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
                     <ShiftCard 
                       key={shift.id} 
                       shift={shift} 
+                      userVerificationStatus={user.verification_status}
                       onApply={() => handleApply(shift.id)} 
                       onNegotiate={() => {
                         setNegotiatingShiftId(shift.id);
@@ -373,7 +418,8 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   );
 }
 
-function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegotiate, onViewProfile, isMyShift, userId }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, onOpenChat?: () => void, onNegotiate?: () => void, onViewProfile?: () => void, isMyShift?: boolean, userId?: string }) {
+function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegotiate, onViewProfile, isMyShift, userId, userVerificationStatus }: { shift: Shift, onApply?: () => void, onWithdraw?: () => void, onRefresh?: () => void, onOpenChat?: () => void, onNegotiate?: () => void, onViewProfile?: () => void, isMyShift?: boolean, userId?: string, userVerificationStatus?: string }) {
+  const isVerified = userVerificationStatus === 'verified';
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
   
@@ -447,9 +493,13 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
           {isMyShift && (
             <span className={cn(
               "px-2.5 py-1 rounded-full text-xs font-semibold",
+              shift.status === 'noshow' ? "bg-red-100 text-red-700" :
+              shift.status === 'cancelled_by_clinic' ? "bg-orange-100 text-orange-700" :
               isAssigned ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
             )}>
-              {isAssigned ? 'Confirmada' : 'Pendiente'}
+              {shift.status === 'noshow' ? 'Ausencia' : 
+               shift.status === 'cancelled_by_clinic' ? 'Cancelada por Clínica' :
+               isAssigned ? 'Confirmada' : 'Pendiente'}
             </span>
           )}
         </div>
@@ -535,27 +585,60 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
 
       <div className="p-4 bg-gray-50 border-t border-gray-200 mt-auto">
         {!isMyShift ? (
-          shift.is_negotiable && onNegotiate ? (
-            <button 
-              onClick={onNegotiate}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              Postular y Ofrecer Precio
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button 
-              onClick={onApply}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              Aplicar a Oportunidad
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          )
+          <div className="space-y-2">
+            {!isVerified && (
+              <p className="text-[11px] text-blue-600 font-medium text-center mb-1">Certificación pendiente para postularte</p>
+            )}
+            {shift.is_negotiable && onNegotiate ? (
+              <button 
+                onClick={onNegotiate}
+                disabled={!isVerified}
+                className={cn(
+                  "w-full py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+                  isVerified 
+                    ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                )}
+              >
+                {!isVerified && <Clock className="w-4 h-4" />}
+                Postular y Ofrecer Precio
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button 
+                onClick={onApply}
+                disabled={!isVerified}
+                className={cn(
+                  "w-full py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+                  isVerified 
+                    ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                )}
+              >
+                {!isVerified && <Clock className="w-4 h-4" />}
+                Aplicar a Oportunidad
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex flex-col items-center justify-center gap-1 text-sm font-medium w-full">
-              {isAssigned ? (
+              {shift.status === 'noshow' ? (
+                <div className="bg-red-50 text-red-700 p-3 rounded-lg border border-red-200 text-center w-full">
+                  <p className="font-bold">Inasistencia registrada</p>
+                  <p className="text-xs font-normal opacity-80 mt-1">
+                    Esta guardia se marcó como inasistencia. Esto afecta tu porcentaje de cumplimiento.
+                  </p>
+                </div>
+              ) : shift.status === 'cancelled_by_clinic' ? (
+                <div className="bg-orange-50 text-orange-700 p-3 rounded-lg border border-orange-200 text-center w-full">
+                  <p className="font-bold">Cancelada por la institución</p>
+                  <p className="text-xs font-normal opacity-80 mt-1">
+                    La clínica canceló esta guardia después de confirmarte.
+                  </p>
+                </div>
+              ) : isAssigned ? (
                 <span className="text-green-600 flex items-center gap-1">
                   <CheckCircle2 className="w-4 h-4" />
                   Asignada a ti

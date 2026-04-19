@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '../lib/utils';
+import { cn, areShiftsOverlapping } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
 import ViewProfileModal from '../components/ViewProfileModal';
 
@@ -164,6 +164,23 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       const shift = shifts.find(s => s.id === shiftId);
       if (!shift) return;
 
+      // Verificar si el médico ya tiene otra guardia confirmada que se superpone
+      // Buscamos en TODAS las guardias de la plataforma para ese médico
+      const { data: otherShifts, error: fetchError } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('assigned_doctor_id', doctorId)
+        .eq('status', 'confirmed');
+
+      if (fetchError) throw fetchError;
+
+      const overlappingShift = (otherShifts as Shift[]).find(s => areShiftsOverlapping(s, shift));
+      
+      if (overlappingShift) {
+        toast.error(`Conflicto de agenda: El profesional ya tiene una guardia confirmada en ese horario (${overlappingShift.clinic_name}). No puedes asignarlo.`);
+        return;
+      }
+
       const { error } = await supabase
         .from('shifts')
         .update({
@@ -202,24 +219,60 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
 
   const handleCancel = async (shiftId: string) => {
     try {
-        const { error } = await supabase
-            .from('shifts')
-            .update({ status: 'cancelled' })
-            .eq('id', shiftId);
+      const shift = shifts.find(s => s.id === shiftId);
+      if (!shift) return;
 
-        if (error) throw error;
+      const isConfirmed = shift.status === 'confirmed';
+      const newStatus = isConfirmed ? 'cancelled_by_clinic' : 'cancelled';
+
+      const { error } = await supabase
+        .from('shifts')
+        .update({ status: newStatus })
+        .eq('id', shiftId);
+
+      if (error) throw error;
+
+      // Si estaba confirmada, penalizar a la clínica (incremetar contador de cancelaciones)
+      if (isConfirmed) {
+        const currentCount = user.cancellation_count || 0;
+        await supabase.from('users').update({ 
+          cancellation_count: currentCount + 1 
+        }).eq('id', user.id);
         
-        setShifts(prevShifts => 
-          prevShifts.map(s => 
-            s.id === shiftId ? { ...s, status: 'cancelled' } : s
-          )
-        );
-
+        toast.warning('Guardia cancelada. Al ser una guardia confirmada, esto queda registrado en tu historial de confiabilidad.');
+      } else {
         toast.success('Publicación eliminada exitosamente');
-        fetchShifts();
+      }
+      
+      fetchShifts();
     } catch (error) {
-        console.error("Error cancelling shift:", error);
-        toast.error("Error al eliminar la publicación.");
+      console.error("Error cancelling shift:", error);
+      toast.error("Error al eliminar la publicación.");
+    }
+  };
+
+  const handleMarkNoShow = async (shiftId: string, doctorId: string) => {
+    try {
+      const { error } = await supabase
+        .from('shifts')
+        .update({ status: 'noshow' })
+        .eq('id', shiftId);
+
+      if (error) throw error;
+
+      // Penalizar al médico en su completion_rate de forma simulada
+      const { data: doctor } = await supabase.from('users').select('completion_rate').eq('id', doctorId).single();
+      if (doctor) {
+        const currentRate = doctor.completion_rate || 100;
+        const newRate = Math.max(0, currentRate - 5); // Baja 5 puntos por cada no-show
+        await supabase.from('users').update({ completion_rate: newRate }).eq('id', doctorId);
+      }
+
+      toast.error('Se ha registrado la inasistencia del profesional.');
+      fetchShifts();
+    } catch (error) {
+      console.error("Error marking no-show:", error);
+      toast.error("Error al registrar inasistencia.");
     }
   };
 
@@ -255,6 +308,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
               onRefresh={fetchShifts}
               onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
               onViewProfile={fetchProfileData}
+              onMarkNoShow={handleMarkNoShow}
             />
           ))
         ) : (
@@ -397,8 +451,8 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   );
 }
 
-function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onViewProfile }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void, onOpenChat: (docId: string, docName: string) => void, onViewProfile: (userId: string) => void }) {
-  const isConfirmed = shift.status === 'confirmed' || shift.status === 'completed';
+function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onViewProfile, onMarkNoShow }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void, onOpenChat: (docId: string, docName: string) => void, onViewProfile: (userId: string) => void, onMarkNoShow: (sId: string, dId: string) => void }) {
+  const isConfirmed = shift.status === 'confirmed' || shift.status === 'completed' || shift.status === 'noshow';
   const isCancelled = shift.status === 'cancelled';
   const [assignedDoctor, setAssignedDoctor] = useState<User | null>(null);
 
@@ -463,6 +517,12 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:flex-row">
+      {/* Clinic Cancellation Penalty Indicator */}
+      {shift.status === 'confirmed' && (
+        <div className="absolute top-0 right-0 p-2">
+          {/* Internal note: indicator visible in status confirmed */}
+        </div>
+      )}
       {/* Shift Details */}
       <div className="p-6 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-200 space-y-4">
         <div className="flex justify-between items-start">
@@ -470,9 +530,13 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
             <div className="flex items-center gap-2 mb-2">
               <span className={cn(
                 "inline-block px-2.5 py-1 rounded-full text-xs font-semibold",
+                shift.status === 'noshow' ? "bg-red-100 text-red-700" : 
+                shift.status === 'cancelled_by_clinic' ? "bg-orange-100 text-orange-700" :
                 isConfirmed ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
               )}>
-                {isConfirmed ? 'Asignada' : 'Buscando Profesional'}
+                {shift.status === 'noshow' ? 'Ausente' : 
+                 shift.status === 'cancelled_by_clinic' ? 'Cancelada (Penalizado)' :
+                 isConfirmed ? 'Asignada' : 'Buscando Profesional'}
               </span>
               <span className={cn(
                 "inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider",
@@ -622,13 +686,25 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white"
                       rows={2}
                     />
-                    <button 
-                      onClick={submitRating}
-                      disabled={submittingRating || ratingVal === 0}
-                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                      {submittingRating ? 'Enviando...' : 'Enviar Calificación'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          if (window.confirm('¿Confirmas que el profesional NO asistió a la guardia? Esto afectará su reputación.')) {
+                            onMarkNoShow(shift.id, assignedDoctor.id);
+                          }
+                        }}
+                        className="flex-1 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-xs font-bold transition-colors border border-red-200"
+                      >
+                        Marcar Inasistencia
+                      </button>
+                      <button 
+                        onClick={submitRating}
+                        disabled={submittingRating || ratingVal === 0}
+                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        {submittingRating ? 'Enviando...' : 'Confirmar y Evaluar'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

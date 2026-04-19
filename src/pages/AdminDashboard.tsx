@@ -219,6 +219,29 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                           <div><p className="text-gray-400 text-xs mb-1">Jurisdicción</p><p className="font-medium">{u.jurisdiction || '—'}</p></div>
                           <div><p className="text-gray-400 text-xs mb-1">Especialidad</p><p className="font-medium">{u.specialty || '—'}</p></div>
                           <div><p className="text-gray-400 text-xs mb-1">Teléfono</p><p className="font-medium">{u.phone || '—'}</p></div>
+                          <div className="md:col-span-2 mt-2 bg-blue-50 p-3 rounded-lg border border-blue-100 italic text-xs">
+                             {u.affidavit_accepted ? (
+                               <div className="flex items-center gap-2 text-blue-700 font-bold">
+                                 <CheckCircle2 className="w-3.5 h-3.5" /> 
+                                 Declaración Jurada Firmada Digitalmente
+                               </div>
+                             ) : (
+                               <div className="flex items-center gap-2 text-red-600 font-bold">
+                                 <XCircle className="w-3.5 h-3.5" /> 
+                                 Sin Declaración Jurada
+                               </div>
+                             )}
+                          </div>
+                          <div className="md:col-span-1 mt-2">
+                             <p className="text-gray-400 text-xs mb-1">Matrícula (Mi Argentina)</p>
+                             {u.license_image_url ? (
+                               <a href={u.license_image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-bold hover:bg-blue-700 transition-colors">
+                                 <Eye className="w-3.5 h-3.5" /> Ver Captura
+                               </a>
+                             ) : (
+                               <span className="text-xs text-red-500 font-medium italic">Pendiente de carga</span>
+                             )}
+                          </div>
                         </>
                       ) : (
                         <>

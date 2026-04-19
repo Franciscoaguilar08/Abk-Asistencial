@@ -1,4 +1,4 @@
-import { X, UserCircle, Phone, Mail, Award, MapPin, Building2, BriefcaseMedical } from 'lucide-react';
+import { X, UserCircle, Phone, Mail, Award, MapPin, Building2, BriefcaseMedical, Calendar, FileText, ExternalLink } from 'lucide-react';
 import { User, Shift } from '../types';
 
 interface ViewProfileModalProps {
@@ -99,7 +99,31 @@ export default function ViewProfileModal({ user, onClose }: ViewProfileModalProp
                   </div>
                 </div>
               )}
+              {user.availability && (
+                <div className="flex items-start gap-2 sm:col-span-2">
+                  <Calendar className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Disponibilidad</p>
+                    <p className="text-sm font-medium text-gray-900">{user.availability}</p>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {user.role === 'doctor' && user.cv_url && (
+              <div className="pt-4 mt-4 border-t border-gray-100">
+                <a 
+                  href={user.cv_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors border border-blue-100"
+                >
+                  <FileText className="w-5 h-5" />
+                  Ver CV completo (PDF)
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </div>

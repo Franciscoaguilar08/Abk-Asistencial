@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
-import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert } from 'lucide-react';
+import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert, Calendar, Upload, FileUp, ExternalLink, Trash2, ShieldCheck, Image as ImageIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -23,6 +23,10 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     license_number: user.license_number || '',
     jurisdiction: user.jurisdiction || '',
     specialty: user.specialty || '',
+    availability: user.availability || '',
+    cv_url: user.cv_url || '',
+    license_image_url: user.license_image_url || '',
+    affidavit_accepted: user.affidavit_accepted || false,
     // Clinic
     cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
     no_cuit: user.cuit === 'N/A',
@@ -44,6 +48,10 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
         name: formData.name,
         phone: formData.phone,
         bio: formData.bio,
+        availability: formData.availability,
+        cv_url: formData.cv_url,
+        license_image_url: formData.license_image_url,
+        affidavit_accepted: formData.affidavit_accepted,
         ...(user.role === 'doctor' ? {
           dni: formData.dni,
           license_number: formData.license_number,
@@ -70,6 +78,90 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Error al actualizar el perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      toast.error('Solo se permiten archivos PDF');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error('El archivo es demasiado grande (máx 5MB)');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `cvs/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('cvs')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('cvs')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, cv_url: publicUrl }));
+      toast.success('CV subido correctamente. No olvides guardar los cambios del perfil.');
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Error al subir el archivo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const removeCv = () => {
+    setFormData(prev => ({ ...prev, cv_url: '' }));
+  };
+
+  const handleLicenseUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      toast.error('Solo se permiten imágenes (JPG, PNG) o PDF');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('El archivo es demasiado grande (máx 5MB)');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-license-${Math.random()}.${fileExt}`;
+      const filePath = `verifications/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('cvs') // Reusing cvs bucket for simplicity, or we can suggest creating 'verifications'
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('cvs')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, license_image_url: publicUrl }));
+      toast.success('Captura de matrícula subida correctamente.');
+    } catch (error) {
+      console.error('Error uploading license:', error);
+      toast.error('Error al subir la captura');
     } finally {
       setLoading(false);
     }
@@ -183,6 +275,133 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
                   />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-gray-500" /> Disponibilidad Horaria / Días
+                  </label>
+                  <input 
+                    type="text" 
+                    name="availability" 
+                    value={formData.availability} 
+                    onChange={handleChange}
+                    placeholder="Ej: Sábados todo el día, Lunes a Viernes de 18 a 22hs..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                  />
+                </div>
+
+                {/* Nueva Sección: Validación de Matrícula Digital */}
+                <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-bold text-gray-900">Validación de Identidad y Matrícula</h4>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Para certificar tu cuenta y poder postularte, adjunta una captura de tu <strong>Matrícula Digital</strong> desde la app <strong>Mi Argentina</strong>.
+                  </p>
+
+                  {formData.license_image_url ? (
+                    <div className="flex items-center justify-between p-4 bg-green-50 border border-green-100 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-green-600 text-white p-2 rounded-lg">
+                          <ImageIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-green-900">Captura de Matrícula Cargada</p>
+                          <a href={formData.license_image_url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline flex items-center gap-1">
+                            Ver imagen <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData(prev => ({ ...prev, license_image_url: '' }))}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-6 transition-colors hover:border-blue-200 hover:bg-blue-50/10 group">
+                      <input 
+                        type="file" 
+                        accept="image/*,.pdf"
+                        onChange={handleLicenseUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={loading}
+                      />
+                      <div className="flex flex-col items-center gap-2 text-center text-gray-500 group-hover:text-blue-600">
+                        <ImageIcon className="w-8 h-8 opacity-40 group-hover:opacity-100" />
+                        <div>
+                          <p className="text-sm font-bold">Subir captura de Mi Argentina</p>
+                          <p className="text-xs">Imagen o PDF (máx 5MB)</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mt-4">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        name="affidavit_accepted"
+                        checked={formData.affidavit_accepted}
+                        onChange={handleChange}
+                        required
+                        className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="text-xs text-amber-900 leading-relaxed font-medium">
+                        <strong>Declaración Jurada:</strong> Declaro bajo juramento que los datos aportados en mi perfil y la documentación adjunta son verídicos. 
+                        Entiendo que la falsificación de estos datos puede derivar en la suspensión definitiva de la cuenta y acciones legales correspondientes.
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-3 pt-2">
+                  <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <FileUp className="w-4 h-4 text-gray-500" /> Tu CV en PDF
+                  </label>
+                  
+                  {formData.cv_url ? (
+                    <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-blue-600 text-white p-2 rounded-lg">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-blue-900">CV_Cargado.pdf</p>
+                          <a href={formData.cv_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                            Ver actual <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={removeCv}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-8 transition-colors hover:border-blue-200 hover:bg-blue-50/10 group">
+                      <input 
+                        type="file" 
+                        accept=".pdf"
+                        onChange={handleFileUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        disabled={loading}
+                      />
+                      <div className="flex flex-col items-center gap-2 text-center text-gray-500 group-hover:text-blue-600">
+                        <Upload className="w-8 h-8 opacity-40 group-hover:opacity-100" />
+                        <div>
+                          <p className="text-sm font-bold">Haz clic para subir tu CV</p>
+                          <p className="text-xs">Solo formato PDF (máx 5MB)</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

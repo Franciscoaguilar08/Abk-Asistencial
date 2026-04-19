@@ -10,19 +10,25 @@ export interface User {
   bio?: string; // Para CV de médicos o descripción de clínicas
   dni?: string; // Para profesionales
   license_number?: string; // Matrícula
+  license_image_url?: string; // Captura de Mi Argentina
   jurisdiction?: string; // Jurisdicción de la matrícula
+  affidavit_accepted?: boolean; // Declaración jurada aceptada
   cuit?: string; // Para instituciones
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
   // Doctor specific
   specialty?: string;
   rating?: number;
   completion_rate?: number; // Porcentaje de asistencia perfecta (ej. 98)
+  penalty_rate?: number; // Porcentaje de cancelaciones de instituciones
+  cancellation_count?: number; // Cantidad total de cancelaciones
   // Clinic specific
   address?: string;
+  availability?: string; // Disponibilidad horaria/días
+  cv_url?: string; // URL del PDF en Supabase Storage
   created_at?: string;
 }
 
-export type ShiftStatus = 'open' | 'pending_confirmation' | 'confirmed' | 'completed' | 'cancelled';
+export type ShiftStatus = 'open' | 'pending_confirmation' | 'confirmed' | 'completed' | 'cancelled' | 'noshow' | 'cancelled_by_clinic';
 
 export interface Shift {
   id: string;
