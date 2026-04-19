@@ -268,25 +268,32 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-6 leading-relaxed"
+              className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed"
             >
-              Conectamos profesionales del sector salud con instituciones y productoras que necesitan resolver guardias y coberturas de forma rápida, confiable y verificada.
+              Conectamos profesionales del sector salud con clínicas, sanatorios y <span className="text-gray-900 font-medium">productores de eventos</span> que necesitan resolver coberturas médicas de forma rápida y verificada.
             </motion.p>
 
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.15 }}
-              className="mt-8 text-sm font-medium text-gray-400"
+              className="flex flex-col items-center gap-2 text-sm font-medium text-gray-500"
             >
-              Plataforma diseñada para <span className="text-blue-500">Clínicas</span>, <span className="text-blue-500">Sanatorios</span> e <span className="text-blue-500">Instituciones de Salud</span>.
+              <p className="uppercase tracking-widest text-[10px] font-bold text-gray-400">Perfecto para coberturas en:</p>
+              <div className="flex flex-wrap justify-center gap-2 max-w-2xl px-4">
+                {['Clínicas', 'Sanatorios', 'Maratones', 'Torneos de Fútbol', 'Recitales', 'Eventos Deportivos', 'Centros Médicos'].map((item) => (
+                  <span key={item} className="px-3 py-1 bg-white text-gray-600 rounded-full border border-gray-200 shadow-sm hover:border-blue-200 hover:text-blue-600 transition-colors">
+                    {item}
+                  </span>
+                ))}
+              </div>
             </motion.div>
             
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-12"
             >
               <button 
                 onClick={() => openAuth('register', 'doctor')}
@@ -376,8 +383,8 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                 },
                 {
                   icon: MessageSquareLock,
-                  title: 'Adiós a los intermediarios informales',
-                  desc: 'Trazabilidad completa de tus gestiones. Dejá de depender de grupos de chat saturados y tomá el control con una herramienta profesional.',
+                  title: 'Versatilidad de uso',
+                  desc: 'Desde una guardia en un sanatorio hasta la cobertura de una maratón o un torneo de fútbol. ABK te permite encontrar al profesional adecuado para cualquier escenario de salud.',
                   color: 'bg-emerald-100 text-emerald-600'
                 }
               ].map((item, idx) => (
@@ -421,7 +428,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           <div className="max-w-4xl mx-auto px-4 text-center">
             <h2 className="text-4xl font-extrabold text-gray-900 mb-6 tracking-tight">Empezá hoy con ABK</h2>
             <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-              La plataforma ideal para clínicas, sanatorios y profesionales de salud que buscan mayor agilidad y transparencia en sus coberturas.
+              La solución flexible para instituciones médicas, productores de eventos y coordinadores de salud que buscan profesionalismo y rapidez.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button onClick={() => openAuth('register', 'doctor')} className="px-8 py-4 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition shadow-md">
