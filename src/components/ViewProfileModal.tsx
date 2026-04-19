@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '../lib/utils';
 
 interface ViewProfileModalProps {
   user: User;
@@ -166,7 +167,30 @@ export default function ViewProfileModal({ user, onClose }: ViewProfileModalProp
                     {clinicShifts.map(s => (
                       <div key={s.id} className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-sm">
                         <div className="flex justify-between items-start mb-1">
-                          <p className="font-bold text-gray-900">{s.specialty}</p>
+                          <div className="flex flex-col">
+                            <p className="font-bold text-gray-900">{s.specialty}</p>
+                            <div className="flex gap-2 mt-1">
+                              <span className={cn(
+                                "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
+                                s.category === 'evento' ? "bg-purple-100 text-purple-700" : 
+                                s.category === 'empleo' ? "bg-green-100 text-green-700" :
+                                s.category === 'suplencia' ? "bg-orange-100 text-orange-700" :
+                                "bg-blue-100 text-blue-700"
+                              )}>
+                                {s.category === 'evento' ? 'Evento' : 
+                                 s.category === 'empleo' ? 'Empleo' :
+                                 s.category === 'suplencia' ? 'Suplencia' :
+                                 'Guardia'}
+                              </span>
+                              {s.job_duration && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-wider">
+                                  {s.job_duration === 'tiempo_completo' ? 'Full Time' :
+                                   s.job_duration === 'semanal' ? 'Semanal' :
+                                   s.job_duration === '3_meses' ? '3 Meses' : 'Fijo'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           <span className="text-xs font-bold text-blue-600">${s.price.toLocaleString('es-AR')}</span>
                         </div>
                         <div className="flex items-center gap-3 text-gray-500 text-xs mt-2">

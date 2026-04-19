@@ -19,6 +19,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
   const [viewedProfileData, setViewedProfileData] = useState<User | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'guardia' | 'evento' | 'empleo' | 'suplencia'>('guardia');
 
   const fetchProfileData = async (userId: string) => {
     try {
@@ -99,7 +100,8 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     const newShift = {
       clinic_id: user.id,
       clinic_name: user.name,
-      category: formData.get('category') as 'guardia' | 'evento',
+      category: formData.get('category') as 'guardia' | 'evento' | 'empleo' | 'suplencia',
+      job_duration: formData.get('job_duration') as any || null,
       specialty: formData.get('specialty') as string,
       type: formData.get('type') as string,
       description: formData.get('description') as string,
@@ -337,18 +339,62 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
             <form onSubmit={handleCreateShift} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2">
-                      <input type="radio" name="category" value="guardia" defaultChecked className="text-blue-600 focus:ring-blue-500" />
-                      <span>Guardia Clínica</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Tipo de Oportunidad</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <label className={cn(
+                      "flex items-center justify-center gap-2 p-2 border rounded-lg cursor-pointer transition-all",
+                      selectedCategory === 'guardia' ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-gray-200 hover:bg-gray-50"
+                    )}>
+                      <input type="radio" name="category" value="guardia" checked={selectedCategory === 'guardia'} onChange={() => setSelectedCategory('guardia')} className="sr-only" />
+                      <span>Guardia</span>
                     </label>
-                    <label className="flex items-center gap-2">
-                      <input type="radio" name="category" value="evento" className="text-blue-600 focus:ring-blue-500" />
-                      <span>Evento (Deportivo, Maratón, etc.)</span>
+                    <label className={cn(
+                      "flex items-center justify-center gap-2 p-2 border rounded-lg cursor-pointer transition-all",
+                      selectedCategory === 'evento' ? "border-purple-600 bg-purple-50 text-purple-700 font-bold" : "border-gray-200 hover:bg-gray-50"
+                    )}>
+                      <input type="radio" name="category" value="evento" checked={selectedCategory === 'evento'} onChange={() => setSelectedCategory('evento')} className="sr-only" />
+                      <span>Evento</span>
+                    </label>
+                    <label className={cn(
+                      "flex items-center justify-center gap-2 p-2 border rounded-lg cursor-pointer transition-all",
+                      selectedCategory === 'empleo' ? "border-green-600 bg-green-50 text-green-700 font-bold" : "border-gray-200 hover:bg-gray-50"
+                    )}>
+                      <input type="radio" name="category" value="empleo" checked={selectedCategory === 'empleo'} onChange={() => setSelectedCategory('empleo')} className="sr-only" />
+                      <span>Empleo</span>
+                    </label>
+                    <label className={cn(
+                      "flex items-center justify-center gap-2 p-2 border rounded-lg cursor-pointer transition-all",
+                      selectedCategory === 'suplencia' ? "border-orange-600 bg-orange-50 text-orange-700 font-bold" : "border-gray-200 hover:bg-gray-50"
+                    )}>
+                      <input type="radio" name="category" value="suplencia" checked={selectedCategory === 'suplencia'} onChange={() => setSelectedCategory('suplencia')} className="sr-only" />
+                      <span>Suplencia</span>
                     </label>
                   </div>
                 </div>
+
+                {(selectedCategory === 'empleo' || selectedCategory === 'suplencia') && (
+                  <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Frecuencia / Duración</label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="radio" name="job_duration" value="tiempo_completo" defaultChecked className="text-blue-600" />
+                        <span>Tiempo Completo</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="radio" name="job_duration" value="semanal" className="text-blue-600" />
+                        <span>Por Semana</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="radio" name="job_duration" value="3_meses" className="text-blue-600" />
+                        <span>Por 3 Meses</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="radio" name="job_duration" value="otro" className="text-blue-600" />
+                        <span>Otro / A convenir</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Especialidad / Rol requerido</label>
                   <input type="text" name="specialty" required placeholder="Ej: Pediatría, Kinesiología, Odontología..." className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -527,24 +573,37 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
       <div className="p-6 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-200 space-y-4">
         <div className="flex justify-between items-start">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className={cn(
-                "inline-block px-2.5 py-1 rounded-full text-xs font-semibold",
-                shift.status === 'noshow' ? "bg-red-100 text-red-700" : 
-                shift.status === 'cancelled_by_clinic' ? "bg-orange-100 text-orange-700" :
-                isConfirmed ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-              )}>
-                {shift.status === 'noshow' ? 'Ausente' : 
-                 shift.status === 'cancelled_by_clinic' ? 'Cancelada (Penalizado)' :
-                 isConfirmed ? 'Asignada' : 'Buscando Profesional'}
-              </span>
-              <span className={cn(
-                "inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider",
-                shift.category === 'evento' ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-700"
-              )}>
-                {shift.category === 'evento' ? 'Evento' : 'Guardia'}
-              </span>
-            </div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={cn(
+                  "inline-block px-2.5 py-1 rounded-full text-xs font-semibold",
+                  shift.status === 'noshow' ? "bg-red-100 text-red-700" : 
+                  shift.status === 'cancelled_by_clinic' ? "bg-orange-100 text-orange-700" :
+                  isConfirmed ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                )}>
+                  {shift.status === 'noshow' ? 'Ausente' : 
+                   shift.status === 'cancelled_by_clinic' ? 'Cancelada (Penalizado)' :
+                   isConfirmed ? 'Asignada' : 'Buscando Profesional'}
+                </span>
+                <span className={cn(
+                  "inline-block px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider",
+                  shift.category === 'evento' ? "bg-purple-100 text-purple-700" : 
+                  shift.category === 'empleo' ? "bg-green-100 text-green-700" :
+                  shift.category === 'suplencia' ? "bg-orange-100 text-orange-700" :
+                  "bg-gray-100 text-gray-700"
+                )}>
+                  {shift.category === 'evento' ? 'Evento' : 
+                   shift.category === 'empleo' ? 'Empleo' :
+                   shift.category === 'suplencia' ? 'Suplencia' :
+                   'Guardia'}
+                </span>
+                {shift.job_duration && (
+                  <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                    {shift.job_duration === 'tiempo_completo' ? 'Tiempo Completo' :
+                     shift.job_duration === 'semanal' ? 'Semanal' :
+                     shift.job_duration === '3_meses' ? '3 Meses' : 'Fijo/Temporal'}
+                  </span>
+                )}
+              </div>
             <h3 className="font-bold text-xl text-gray-900">{shift.specialty}</h3>
             <p className="text-gray-600">{shift.type}</p>
           </div>

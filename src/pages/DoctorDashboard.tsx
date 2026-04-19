@@ -258,9 +258,11 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-50 text-sm flex-1 font-semibold text-gray-700"
             >
-              <option value="Todas">Guardias y Eventos</option>
-              <option value="guardia">Solo Guardias Clínicas</option>
+              <option value="Todas">Todas las categorìas</option>
+              <option value="guardia">Solo Guardias</option>
               <option value="evento">Solo Eventos</option>
+              <option value="empleo">Solo Empleos</option>
+              <option value="suplencia">Solo Suplencias</option>
             </select>
             <select 
               value={selectedZone}
@@ -477,10 +479,23 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
             <div className="flex items-center gap-2 mb-1">
               <span className={cn(
                 "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                shift.category === 'evento' ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                shift.category === 'evento' ? "bg-purple-100 text-purple-700" : 
+                shift.category === 'empleo' ? "bg-green-100 text-green-700" :
+                shift.category === 'suplencia' ? "bg-orange-100 text-orange-700" :
+                "bg-blue-100 text-blue-700"
               )}>
-                {shift.category === 'evento' ? 'Evento' : 'Guardia Clínica'}
+                {shift.category === 'evento' ? 'Evento' : 
+                 shift.category === 'empleo' ? 'Empleo' :
+                 shift.category === 'suplencia' ? 'Suplencia' :
+                 'Guardia Clínica'}
               </span>
+              {shift.job_duration && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-wider">
+                  {shift.job_duration === 'tiempo_completo' ? 'Tiempo Completo' :
+                   shift.job_duration === 'semanal' ? 'Semanal' :
+                   shift.job_duration === '3_meses' ? '3 Meses' : 'Fijo/Temporal'}
+                </span>
+              )}
             </div>
             <button onClick={onViewProfile} className="text-left group mb-1 block">
               <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors leading-tight flex items-center gap-1">

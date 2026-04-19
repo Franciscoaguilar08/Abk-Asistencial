@@ -34,7 +34,8 @@ export interface Shift {
   id: string;
   clinic_id: string;
   clinic_name: string;
-  category: 'guardia' | 'evento';
+  category: 'guardia' | 'evento' | 'empleo' | 'suplencia';
+  job_duration?: 'tiempo_completo' | 'semanal' | 'mensual' | '3_meses' | 'otro';
   type: string; // e.g., 'Guardia 24hs', 'Cobertura de Torneo'
   specialty: string; // e.g., 'Pediatría', 'Clínica Médica', 'Terapia Intensiva'
   date: string; // ISO string
