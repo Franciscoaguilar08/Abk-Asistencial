@@ -2,21 +2,27 @@ import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
-import { Users, Activity, Calendar, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import {
+  Users, Activity, Calendar, ShieldAlert, CheckCircle2,
+  XCircle, Clock, Eye, ChevronDown, ChevronUp, Briefcase,
+  Building2, Star, TrendingUp
+} from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AdminDashboardProps {
   currentUser: User | null;
 }
 
+const ADMIN_EMAIL = 'franciscoaguilar008@gmail.com';
+
 export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Reemplaza esto con tu correo exacto de administrador
-  const ADMIN_EMAIL = 'franciscoaguilar008@gmail.com';
+  const [activeTab, setActiveTab] = useState<'pending' | 'users' | 'shifts' | 'metrics'>('pending');
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser?.email === ADMIN_EMAIL) {
@@ -26,130 +32,383 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
 
   const fetchAdminData = async () => {
     try {
-      const [usersResponse, shiftsResponse] = await Promise.all([
+      const [usersRes, shiftsRes] = await Promise.all([
         supabase.from('users').select('*').order('created_at', { ascending: false }),
-        supabase.from('shifts').select('*').order('created_at', { ascending: false })
+        supabase.from('shifts').select('*').order('created_at', { ascending: false }),
       ]);
-
-      if (usersResponse.error) throw usersResponse.error;
-      if (shiftsResponse.error) throw shiftsResponse.error;
-
-      setUsers(usersResponse.data as User[]);
-      setShifts(shiftsResponse.data as Shift[]);
+      if (usersRes.error) throw usersRes.error;
+      if (shiftsRes.error) throw shiftsRes.error;
+      setUsers(usersRes.data as User[]);
+      setShifts(shiftsRes.data as Shift[]);
     } catch (error) {
-      console.error("Error fetching admin data:", error);
+      console.error('Error fetching admin data:', error);
+      toast.error('Error al cargar datos del panel');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleVerify = async (userId: string, action: 'verified' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ verification_status: action })
+        .eq('id', userId);
+      if (error) throw error;
+
+      const user = users.find(u => u.id === userId);
+      if (user) {
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          title: action === 'verified' ? '¡Cuenta verificada!' : 'Verificación rechazada',
+          message: action === 'verified'
+            ? 'Tu cuenta fue verificada. Ya podés operar en la red ABK Asistencial.'
+            : 'Tu solicitud de verificación fue rechazada. Contactanos para más información.',
+          type: 'system',
+        });
+      }
+
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, verification_status: action } : u));
+      toast.success(action === 'verified' ? 'Usuario verificado ✓' : 'Usuario rechazado');
+    } catch (error) {
+      toast.error('Error al actualizar el estado');
+    }
+  };
+
+  const handleDeleteShift = async (shiftId: string) => {
+    if (!confirm('¿Seguro que querés eliminar esta guardia?')) return;
+    try {
+      const { error } = await supabase.from('shifts').delete().eq('id', shiftId);
+      if (error) throw error;
+      setShifts(prev => prev.filter(s => s.id !== shiftId));
+      toast.success('Guardia eliminada');
+    } catch {
+      toast.error('Error al eliminar');
+    }
+  };
+
   if (!currentUser || currentUser.email !== ADMIN_EMAIL) {
-    // Si no es el admin, lo pateamos al inicio sin decirle que existe esta ruta
     return <Navigate to="/" replace />;
   }
 
   if (loading) {
-    return <div className="py-12 text-center">Cargando panel de Dios...</div>;
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <ShieldAlert className="w-12 h-12 text-yellow-500 mx-auto mb-3 animate-pulse" />
+          <p className="text-gray-500">Cargando panel de administración...</p>
+        </div>
+      </div>
+    );
   }
 
+  const pendingUsers = users.filter(u => u.verification_status === 'pending');
+  const verifiedUsers = users.filter(u => u.verification_status === 'verified');
   const doctors = users.filter(u => u.role === 'doctor');
   const clinics = users.filter(u => u.role === 'clinic');
-  const activeShifts = shifts.filter(s => s.status === 'open');
+  const openShifts = shifts.filter(s => s.status === 'open');
   const confirmedShifts = shifts.filter(s => s.status === 'confirmed');
+  const completedShifts = shifts.filter(s => s.status === 'completed');
+  const totalRevenue = completedShifts.reduce((acc, s) => acc + (s.price || 0), 0);
+
+  const tabs = [
+    { id: 'pending', label: 'Pendientes', count: pendingUsers.length, alert: pendingUsers.length > 0 },
+    { id: 'users', label: 'Usuarios', count: users.length },
+    { id: 'shifts', label: 'Guardias', count: shifts.length },
+    { id: 'metrics', label: 'Métricas', count: null },
+  ] as const;
 
   return (
-    <div className="space-y-6">
-      <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg flex items-center gap-4">
-        <ShieldAlert className="w-10 h-10 text-yellow-400" />
-        <div>
-          <h1 className="text-2xl font-bold">Modo Desarrollador (God Mode)</h1>
-          <p className="text-slate-400">Vista global del sistema. Invisible para usuarios normales.</p>
+    <div className="space-y-6 pb-12">
+      <div className="bg-slate-900 text-white p-6 rounded-xl flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <ShieldAlert className="w-10 h-10 text-yellow-400" />
+          <div>
+            <h1 className="text-2xl font-bold">Panel de Administración</h1>
+            <p className="text-slate-400 text-sm">ABK Asistencial — vista privada</p>
+          </div>
         </div>
+        {pendingUsers.length > 0 && (
+          <div className="bg-yellow-400 text-slate-900 px-4 py-2 rounded-lg font-bold text-sm">
+            {pendingUsers.length} esperando verificación
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <Users className="w-5 h-5 text-blue-500" />
-            <h3 className="font-semibold text-gray-700">Total Usuarios</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Usuarios totales', value: users.length, sub: `${doctors.length} médicos · ${clinics.length} clínicas`, icon: Users, color: 'text-blue-500' },
+          { label: 'Verificados', value: verifiedUsers.length, sub: `${pendingUsers.length} pendientes`, icon: CheckCircle2, color: 'text-green-500' },
+          { label: 'Guardias activas', value: openShifts.length, sub: `${confirmedShifts.length} confirmadas`, icon: Calendar, color: 'text-indigo-500' },
+          { label: 'Completadas', value: completedShifts.length, sub: `$${totalRevenue.toLocaleString('es-AR')} en guardias`, icon: TrendingUp, color: 'text-emerald-500' },
+        ].map(({ label, value, sub, icon: Icon, color }) => (
+          <div key={label} className="bg-white p-5 rounded-xl border border-gray-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className={`w-4 h-4 ${color}`} />
+              <span className="text-sm text-gray-500">{label}</span>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{value}</p>
+            <p className="text-xs text-gray-400 mt-1">{sub}</p>
           </div>
-          <p className="text-3xl font-bold">{users.length}</p>
-          <p className="text-sm text-gray-500 mt-1">{doctors.length} Profesionales | {clinics.length} Clínicas</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <Calendar className="w-5 h-5 text-indigo-500" />
-            <h3 className="font-semibold text-gray-700">Total Guardias</h3>
-          </div>
-          <p className="text-3xl font-bold">{shifts.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Histórico completo</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <Activity className="w-5 h-5 text-yellow-500" />
-            <h3 className="font-semibold text-gray-700">Buscando Profesional</h3>
-          </div>
-          <p className="text-3xl font-bold text-yellow-600">{activeShifts.length}</p>
-          <p className="text-sm text-gray-500 mt-1">En estado "open"</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <ShieldAlert className="w-5 h-5 text-green-500" />
-            <h3 className="font-semibold text-gray-700">Guardias "Match"</h3>
-          </div>
-          <p className="text-3xl font-bold text-green-600">{confirmedShifts.length}</p>
-          <p className="text-sm text-gray-500 mt-1">Con profesional asignado</p>
-        </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tabla de Usuarios */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-bold text-gray-900">Últimos Registros (Base de datos)</h3>
-          </div>
-          <div className="overflow-y-auto flex-1 p-4 space-y-3">
-            {users.slice(0, 50).map(u => (
-              <div key={u.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
-                <div>
-                  <p className="font-medium text-gray-900">{u.name}</p>
-                  <p className="text-xs text-gray-500">{u.email}</p>
-                </div>
-                <span className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full ${u.role === 'doctor' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                  {u.role}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="flex gap-2 border-b border-gray-200">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              activeTab === tab.id
+                ? 'bg-white border border-b-white border-gray-200 text-gray-900 -mb-px'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab.label}
+            {tab.count !== null && (
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+                tab.alert ? 'bg-yellow-400 text-slate-900' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-        {/* Tabla de Guardias */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col h-[500px]">
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-bold text-gray-900">Movimiento de Guardias</h3>
-          </div>
-          <div className="overflow-y-auto flex-1 p-4 space-y-3">
-            {shifts.slice(0, 50).map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
-                <div>
-                  <p className="font-medium text-gray-900">{s.specialty} en {s.clinic_name}</p>
-                  <div className="flex gap-2 text-xs text-gray-500 mt-1">
-                    <span>{format(new Date(s.date), "dd/MM/yyyy")}</span>
-                    <span>•</span>
-                    <span>Postulantes: {s.applicants?.length || 0}</span>
+      {activeTab === 'pending' && (
+        <div className="space-y-3">
+          {pendingUsers.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-300" />
+              <p className="font-medium">No hay usuarios pendientes</p>
+              <p className="text-sm">Todos los registros están procesados</p>
+            </div>
+          ) : (
+            pendingUsers.map(u => (
+              <div key={u.id} className="bg-white border border-yellow-200 rounded-xl overflow-hidden">
+                <div
+                  className="flex items-center justify-between p-4 cursor-pointer hover:bg-yellow-50"
+                  onClick={() => setExpandedUser(expandedUser === u.id ? null : u.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${u.role === 'doctor' ? 'bg-blue-500' : 'bg-purple-500'}`}>
+                      {u.name?.charAt(0) || '?'}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
+                      <p className="text-xs text-gray-500">{u.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${u.role === 'doctor' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                      {u.role === 'doctor' ? 'Médico' : 'Clínica'}
+                    </span>
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    {expandedUser === u.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                   </div>
                 </div>
-                <span className={`px-2.5 py-1 text-xs font-bold uppercase rounded-full ${s.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                  {s.status}
-                </span>
+
+                {expandedUser === u.id && (
+                  <div className="border-t border-yellow-100 p-4 bg-yellow-50">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 text-sm">
+                      {u.role === 'doctor' ? (
+                        <>
+                          <div><p className="text-gray-400 text-xs mb-1">DNI</p><p className="font-medium">{u.dni || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1">Matrícula</p><p className="font-medium">{u.license_number || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1">Jurisdicción</p><p className="font-medium">{u.jurisdiction || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1">Especialidad</p><p className="font-medium">{u.specialty || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1">Teléfono</p><p className="font-medium">{u.phone || '—'}</p></div>
+                        </>
+                      ) : (
+                        <>
+                          <div><p className="text-gray-400 text-xs mb-1">CUIT</p><p className="font-medium">{u.cuit || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1">Dirección</p><p className="font-medium">{u.address || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1">Teléfono</p><p className="font-medium">{u.phone || '—'}</p></div>
+                        </>
+                      )}
+                      <div><p className="text-gray-400 text-xs mb-1">Registrado</p><p className="font-medium">{u.created_at ? format(new Date(u.created_at), "dd/MM/yyyy HH:mm", { locale: es }) : '—'}</p></div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleVerify(u.id, 'verified')}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Aprobar
+                      </button>
+                      <button
+                        onClick={() => handleVerify(u.id, 'rejected')}
+                        className="flex items-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Rechazar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === 'users' && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Todos los usuarios ({users.length})</span>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {users.map(u => (
+              <div key={u.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${u.role === 'doctor' ? 'bg-blue-500' : 'bg-purple-500'}`}>
+                    {u.name?.charAt(0) || '?'}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{u.name || 'Sin nombre'}</p>
+                    <p className="text-xs text-gray-400">{u.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {u.role === 'doctor' && u.specialty && (
+                    <span className="text-xs text-gray-400">{u.specialty}</span>
+                  )}
+                  <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                    u.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
+                    u.verification_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    u.verification_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-500'
+                  }`}>
+                    {u.verification_status === 'verified' ? 'Verificado' :
+                     u.verification_status === 'pending' ? 'Pendiente' :
+                     u.verification_status === 'rejected' ? 'Rechazado' : 'Sin verificar'}
+                  </span>
+                  {u.verification_status === 'pending' && (
+                    <div className="flex gap-1">
+                      <button onClick={() => handleVerify(u.id, 'verified')} className="p-1 rounded hover:bg-green-100 text-green-600" title="Aprobar">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleVerify(u.id, 'rejected')} className="p-1 rounded hover:bg-red-100 text-red-600" title="Rechazar">
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'shifts' && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Todas las guardias ({shifts.length})</span>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {shifts.map(s => (
+              <div key={s.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{s.specialty} — {s.clinic_name}</p>
+                  <div className="flex gap-3 text-xs text-gray-400 mt-0.5">
+                    <span>{s.date ? format(new Date(s.date), "dd/MM/yyyy", { locale: es }) : '—'}</span>
+                    <span>{s.start_time} → {s.end_time}</span>
+                    <span>{s.zone}</span>
+                    <span className="font-medium text-gray-600">${s.price?.toLocaleString('es-AR')}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">{s.applicants?.length || 0} postulantes</span>
+                  <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                    s.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                    s.status === 'open' ? 'bg-blue-100 text-blue-700' :
+                    s.status === 'completed' ? 'bg-gray-100 text-gray-600' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {s.status}
+                  </span>
+                  <button
+                    onClick={() => handleDeleteShift(s.id)}
+                    className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600"
+                    title="Eliminar"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'metrics' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-500" /> Usuarios por estado
+            </h3>
+            {[
+              { label: 'Verificados', value: verifiedUsers.length, color: 'bg-green-500' },
+              { label: 'Pendientes', value: pendingUsers.length, color: 'bg-yellow-400' },
+              { label: 'Rechazados', value: users.filter(u => u.verification_status === 'rejected').length, color: 'bg-red-400' },
+              { label: 'Sin verificar', value: users.filter(u => !u.verification_status || u.verification_status === 'unverified').length, color: 'bg-gray-300' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="flex items-center gap-3 mb-3">
+                <div className="w-24 text-xs text-gray-500">{label}</div>
+                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div className={`${color} h-2 rounded-full`} style={{ width: users.length ? `${(value / users.length) * 100}%` : '0%' }} />
+                </div>
+                <div className="w-6 text-xs font-bold text-gray-700 text-right">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-indigo-500" /> Guardias por estado
+            </h3>
+            {[
+              { label: 'Abiertas', value: openShifts.length, color: 'bg-blue-500' },
+              { label: 'Confirmadas', value: confirmedShifts.length, color: 'bg-green-500' },
+              { label: 'Completadas', value: completedShifts.length, color: 'bg-gray-400' },
+              { label: 'Canceladas', value: shifts.filter(s => s.status === 'cancelled').length, color: 'bg-red-400' },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="flex items-center gap-3 mb-3">
+                <div className="w-24 text-xs text-gray-500">{label}</div>
+                <div className="flex-1 bg-gray-100 rounded-full h-2">
+                  <div className={`${color} h-2 rounded-full`} style={{ width: shifts.length ? `${(value / shifts.length) * 100}%` : '0%' }} />
+                </div>
+                <div className="w-6 text-xs font-bold text-gray-700 text-right">{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 p-5 md:col-span-2">
+            <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-emerald-500" /> Especialidades más demandadas
+            </h3>
+            {Object.entries(
+              shifts.reduce((acc, s) => {
+                acc[s.specialty] = (acc[s.specialty] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>)
+            )
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 8)
+              .map(([specialty, count]) => (
+                <div key={specialty} className="flex items-center gap-3 mb-3">
+                  <div className="w-40 text-xs text-gray-500 truncate">{specialty}</div>
+                  <div className="flex-1 bg-gray-100 rounded-full h-2">
+                    <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${(count / shifts.length) * 100}%` }} />
+                  </div>
+                  <div className="w-6 text-xs font-bold text-gray-700 text-right">{count}</div>
+                </div>
+              ))}
+            {shifts.length === 0 && <p className="text-sm text-gray-400">Sin datos todavía</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
