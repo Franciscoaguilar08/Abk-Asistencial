@@ -229,7 +229,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             
             <div className="hidden md:flex items-center gap-8">
               <button onClick={() => scrollTo('como-funciona')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Cómo funciona</button>
-              <button onClick={() => scrollTo('para-quien')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Para quién es</button>
+              <button onClick={() => scrollTo('por-que')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Por qué usar</button>
               <button onClick={() => scrollTo('seguridad')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Seguridad</button>
             </div>
 
@@ -268,10 +268,19 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed"
+              className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-6 leading-relaxed"
             >
               Conectamos profesionales del sector salud con instituciones y productoras que necesitan resolver guardias y coberturas de forma rápida, confiable y verificada.
             </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+              className="mt-8 text-sm font-medium text-gray-400"
+            >
+              Plataforma diseñada para <span className="text-blue-500">Clínicas</span>, <span className="text-blue-500">Sanatorios</span> e <span className="text-blue-500">Instituciones de Salud</span>.
+            </motion.div>
             
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -297,100 +306,91 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           </div>
         </section>
 
-        {/* COMO FUNCIONA */}
-        <section id="como-funciona" className="py-24 bg-white border-t border-gray-100">
+        {/* COMO FUNCIONA - HORIZONTAL TIMELINE */}
+        <section id="como-funciona" className="py-24 bg-white border-t border-gray-100 overflow-hidden">
           <div className="max-w-6xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-16">Cómo funciona</h2>
-            <div className="grid md:grid-cols-3 gap-12">
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
-                  <Activity className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">1. Publicás o buscás</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Instituciones publican coberturas. Profesionales exploran oportunidades según disponibilidad, ubicación y tipo de trabajo.
-                </p>
-              </div>
-              <div className="text-center relative">
-                <div className="hidden md:block absolute top-8 -left-6 w-12 border-t-2 border-dashed border-gray-200" />
-                <div className="w-16 h-16 mx-auto bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-6">
-                  <ShieldCheck className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">2. Verificación</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Todos los perfiles pasan por validación de matrícula y revisión básica para dar más confianza y seguridad.
-                </p>
-                <div className="hidden md:block absolute top-8 -right-6 w-12 border-t-2 border-dashed border-gray-200" />
-              </div>
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-6">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">3. Elegís y trabajás</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  La institución elige al profesional o el profesional acepta la oportunidad. Resolvé sin cadenas interminables de WhatsApp.
-                </p>
+            <h2 className="text-4xl font-extrabold text-center text-gray-900 mb-20 tracking-tight">Cómo funciona</h2>
+            
+            <div className="relative">
+              {/* Connector line (desktop only) */}
+              <div className="hidden md:block absolute top-[28px] left-[15%] right-[15%] h-0.5 bg-gray-100" />
+              
+              <div className="flex flex-col md:flex-row justify-between gap-12 md:gap-4">
+                {[
+                  {
+                    step: '1',
+                    icon: Activity,
+                    title: 'Publicás o buscás',
+                    desc: 'Instituciones publican coberturas. Profesionales exploran oportunidades según disponibilidad y ubicación.',
+                    color: 'blue'
+                  },
+                  {
+                    step: '2',
+                    icon: ShieldCheck,
+                    title: 'Verificación',
+                    desc: 'Todos los perfiles pasan por validación de matrícula y revisión básica para asegurar confianza.',
+                    color: 'green'
+                  },
+                  {
+                    step: '3',
+                    icon: CheckCircle2,
+                    title: 'Elegís y trabajás',
+                    desc: 'Resolvé las coberturas sin cadenas de WhatsApp. Todo el proceso centralizado en un solo lugar.',
+                    color: 'purple'
+                  }
+                ].map((item, idx) => (
+                  <div key={idx} className="relative z-10 flex flex-col items-center text-center flex-1 px-4">
+                    <div className={`w-14 h-14 rounded-full bg-white border-4 border-gray-50 flex items-center justify-center mb-6 shadow-sm`}>
+                      <span className="text-xl font-black text-gray-900">{item.step}</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
+                    <p className="text-gray-500 max-w-xs leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
-        {/* PARA QUIEN ES */}
-        <section id="para-quien" className="py-24 bg-gray-50 border-t border-gray-200">
-          <div className="max-w-6xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-16">Pensado para quienes necesitan resolver rápido</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
-                  <Building2 className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Clínicas</h3>
-                <p className="text-gray-600">Para cubrir vacantes, reemplazos o guardias con mayor agilidad.</p>
-              </div>
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
-                  <Activity className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Sanatorios</h3>
-                <p className="text-gray-600">Para organizar coberturas con profesionales validados y reducir fricción operativa.</p>
-              </div>
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
-                  <Stethoscope className="w-6 h-6" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">Profesionales freelance</h3>
-                <p className="text-gray-600">Para encontrar guardias y oportunidades laborales de forma más simple, clara y ordenada.</p>
-              </div>
+        {/* POR QUÉ USAR - EDITORIAL STYLE */}
+        <section id="por-que" className="py-24 bg-gray-50 border-y border-gray-200">
+          <div className="max-w-4xl mx-auto px-4">
+            <div className="mb-16 text-left">
+              <h2 className="text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">Por qué usar esta plataforma</h2>
+              <p className="text-gray-600 text-lg">Diseñamos ABK para resolver los puntos de dolor más comunes en la gestión de salud.</p>
             </div>
-          </div>
-        </section>
-
-        {/* DIFERENCIAL */}
-        <section className="py-24 bg-white border-t border-gray-100">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-16">Por qué usar esta plataforma</h2>
-            <div className="grid md:grid-cols-3 gap-8 text-left">
-              <div className="bg-gray-50/50 p-8 rounded-3xl border border-gray-100 hover:shadow-md transition">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
-                  <BadgeCheck className="w-6 h-6" />
+            
+            <div className="space-y-8">
+              {[
+                {
+                  icon: BadgeCheck,
+                  title: 'Validación de matrícula real',
+                  desc: 'Eliminamos la incertidumbre. Cada profesional que ves en la plataforma ha pasado por un proceso de carga y revisión de sus credenciales profesionales.',
+                  color: 'bg-blue-100 text-blue-600'
+                },
+                {
+                  icon: Zap,
+                  title: 'Velocidad de respuesta',
+                  desc: 'Las guardias se cubren en minutos, no en días. Nuestro sistema de notificaciones asegura que la oferta llegue al profesional indicado al instante.',
+                  color: 'bg-amber-100 text-amber-600'
+                },
+                {
+                  icon: MessageSquareLock,
+                  title: 'Adiós a los intermediarios informales',
+                  desc: 'Trazabilidad completa de tus gestiones. Dejá de depender de grupos de chat saturados y tomá el control con una herramienta profesional.',
+                  color: 'bg-emerald-100 text-emerald-600'
+                }
+              ].map((item, idx) => (
+                <div key={idx} className="flex flex-col sm:flex-row gap-6 p-8 bg-white rounded-3xl border border-gray-200 shadow-sm hover:shadow-md transition-all group">
+                  <div className={`shrink-0 w-16 h-16 rounded-2xl ${item.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <item.icon className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h4 className="text-2xl font-bold text-gray-900 mb-2">{item.title}</h4>
+                    <p className="text-gray-600 text-lg leading-relaxed">{item.desc}</p>
+                  </div>
                 </div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3">Validación de matrícula</h4>
-                <p className="text-gray-600 leading-relaxed">Buscamos que los profesionales que participan estén correctamente identificados y verificados.</p>
-              </div>
-              <div className="bg-gray-50/50 p-8 rounded-3xl border border-gray-100 hover:shadow-md transition">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
-                  <Zap className="w-6 h-6" />
-                </div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3">Rapidez</h4>
-                <p className="text-gray-600 leading-relaxed">Menos tiempo buscando, menos idas y vueltas, más resolución.</p>
-              </div>
-              <div className="bg-gray-50/50 p-8 rounded-3xl border border-gray-100 hover:shadow-md transition">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6 text-blue-600">
-                  <MessageSquareLock className="w-6 h-6" />
-                </div>
-                <h4 className="text-xl font-bold text-gray-900 mb-3">Sin intermediarios informales</h4>
-                <p className="text-gray-600 leading-relaxed">Todo en un mismo lugar, con mayor orden, trazabilidad y confianza.</p>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -417,11 +417,11 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         </section>
 
         {/* CTA FINAL */}
-        <section className="py-24 bg-white">
+        <section className="py-24 bg-white border-t border-gray-100">
           <div className="max-w-4xl mx-auto px-4 text-center">
-            <h2 className="text-4xl font-extrabold text-gray-900 mb-6">Empezá hoy</h2>
-            <p className="text-lg text-gray-600 mb-10">
-              Ya seas profesional o institución, la plataforma está pensada para hacer más simple la cobertura de guardias y oportunidades.
+            <h2 className="text-4xl font-extrabold text-gray-900 mb-6 tracking-tight">Empezá hoy con ABK</h2>
+            <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+              La plataforma ideal para clínicas, sanatorios y profesionales de salud que buscan mayor agilidad y transparencia en sus coberturas.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button onClick={() => openAuth('register', 'doctor')} className="px-8 py-4 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition shadow-md">
