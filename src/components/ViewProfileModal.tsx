@@ -33,7 +33,11 @@ export default function ViewProfileModal({ user, onClose }: ViewProfileModalProp
               <h1 className="text-xl font-bold text-gray-900">{user.name}</h1>
               {user.specialty && <p className="text-blue-700 font-medium text-sm">{user.specialty}</p>}
               <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-                {user.rating && <span className="text-yellow-600 font-medium flex items-center gap-1">★ {user.rating.toFixed(1)}</span>}
+                {user.rating ? (
+                  <span className="text-yellow-600 font-medium flex items-center gap-1">★ {user.rating.toFixed(1)}</span>
+                ) : (
+                  <span className="text-gray-400 font-medium flex items-center gap-1">★ Nuevo</span>
+                )}
                 {user.completion_rate && <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">{user.completion_rate}% Cumplimiento</span>}
               </div>
             </div>
@@ -91,7 +95,7 @@ export default function ViewProfileModal({ user, onClose }: ViewProfileModalProp
                   <Building2 className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-xs text-gray-500">CUIT</p>
-                    <p className="text-sm font-medium text-gray-900">{user.cuit}</p>
+                    <p className="text-sm font-medium text-gray-900">{user.cuit === 'N/A' ? 'No aplica' : user.cuit}</p>
                   </div>
                 </div>
               )}

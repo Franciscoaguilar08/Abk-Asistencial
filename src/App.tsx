@@ -60,7 +60,7 @@ export default function App() {
           name: session.user.user_metadata?.name || '',
           email: session.user.email,
           role: session.user.user_metadata?.role || 'doctor',
-          ...(session.user.user_metadata?.role === 'doctor' ? { rating: 5.0, completion_rate: 100 } : {})
+          ...(session.user.user_metadata?.role === 'doctor' ? { completion_rate: 100 } : {})
         };
         
         const { data: insertedData, error: insertError } = await supabase

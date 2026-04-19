@@ -550,7 +550,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
                 <p className="text-sm text-gray-600">{assignedDoctor.specialty}</p>
                 <div className="flex items-center gap-3 mt-1">
                   <div className="flex items-center gap-1 text-sm text-yellow-600">
-                    ★ {assignedDoctor.rating}
+                    {assignedDoctor.rating ? `★ ${assignedDoctor.rating.toFixed(1)}` : '★ Nuevo'}
                   </div>
                   {assignedDoctor.completion_rate && (
                     <div className="flex items-center gap-1 text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded-full">
@@ -646,7 +646,7 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
                     <button onClick={() => onViewProfile(applicant.id)} className="font-medium text-gray-900 text-sm hover:text-blue-600 transition-colors border-b border-transparent hover:border-blue-600">{applicant.name}</button>
                     <div className="flex items-center gap-2 mt-0.5">
                       <div className="flex items-center gap-1 text-xs text-yellow-600">
-                        ★ {applicant.rating}
+                        {applicant.rating ? `★ ${applicant.rating.toFixed(1)}` : '★ Nuevo'}
                       </div>
                       {applicant.completion_rate && (
                         <div className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded-full">

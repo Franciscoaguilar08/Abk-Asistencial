@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Resend } from 'resend';
 import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
@@ -15,10 +16,32 @@ async function startServer() {
   const PORT = 3000;
   
   const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+  const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
 
   app.use(express.json());
 
   // API Routes
+  app.post('/api/ai/generate', async (req, res) => {
+    const { prompt, systemInstruction } = req.body;
+    
+    if (!ai) {
+      return res.status(503).json({ error: 'Gemini AI not configured on server' });
+    }
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: systemInstruction ? { systemInstruction } : undefined,
+      });
+
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error('Gemini error:', error);
+      res.status(500).json({ error: error.message || 'Error generating AI response' });
+    }
+  });
+
   app.post('/api/notify-new-shift', async (req, res) => {
     const { shiftData, recipients } = req.body;
     

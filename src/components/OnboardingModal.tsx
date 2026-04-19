@@ -18,11 +18,13 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
     license_number: '',
     jurisdiction: '',
     specialty: '',
-    cuit: '',
+    cuit: user.cuit || '',
+    no_cuit: user.cuit === 'N/A',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
+    setFormData((prev) => ({ ...prev, [e.target.name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +43,7 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
         updatePayload.jurisdiction = formData.jurisdiction;
         updatePayload.specialty = formData.specialty;
       } else {
-        updatePayload.cuit = formData.cuit;
+        updatePayload.cuit = formData.no_cuit ? 'N/A' : formData.cuit;
       }
 
       const { data, error } = await supabase
@@ -64,7 +66,7 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] px-4">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] px-4 text-gray-900">
       <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative overflow-hidden">
         {user.verification_status === 'pending' ? (
           <div className="py-8 flex flex-col items-center justify-center text-center space-y-6">
@@ -72,12 +74,16 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
               <Clock className="w-12 h-12" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-bold text-gray-900">Perfil en Revisión</h3>
+              <h3 className="text-2xl font-bold">Perfil en Revisión</h3>
               <p className="text-gray-600 leading-relaxed">
-                Gracias por completar tus datos. Tu matrícula ({user.license_number}) está siendo verificada manualmente por nuestro equipo de seguridad. 
+                Gracias por completar tus datos. {user.role === 'doctor' 
+                  ? `Tu matrícula (${user.license_number})` 
+                  : user.cuit === 'N/A' 
+                    ? 'Tu perfil institucional' 
+                    : `Tu CUIT (${user.cuit})`} está siendo verificado manualmente por nuestro equipo de seguridad. 
               </p>
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm text-gray-500 mt-4">
-                Recibirás una notificación en tu correo cuando tu perfil sea aprobado para empezar a postularte a guardias.
+                Recibirás una notificación en tu correo cuando tu perfil sea aprobado para empezar a {user.role === 'doctor' ? 'postularte a guardias' : 'publicar oportunidades'}.
               </div>
             </div>
             <button 
@@ -94,8 +100,8 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
             {user.role === 'doctor' ? <FileCheck2 className="w-8 h-8" /> : <Building2 className="w-8 h-8" />}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Validación de Datos</h2>
-            <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+            <h2 className="text-xl font-bold">Validación de Datos</h2>
+            <p className="text-sm text-gray-600 mt-1 leading-relaxed text-left">
               {user.role === 'doctor' 
                 ? 'Para garantizar la seguridad de la red, un administrador revisará tu matrícula profesional manualmente antes de permitirte postularte.'
                 : 'Para publicar guardias, validamos la existencia legal de tu institución.'}
@@ -145,8 +151,29 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
                 <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CUIT (Sin guiones)</label>
-                <input required type="number" name="cuit" value={formData.cuit} onChange={handleChange} placeholder="Ej: 30112233445" className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">CUIT (Sin guiones)</label>
+                  <label className="flex items-center gap-1.5 text-xs text-blue-600 font-medium cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      name="no_cuit" 
+                      checked={formData.no_cuit} 
+                      onChange={handleChange} 
+                      className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    No aplico / No tengo
+                  </label>
+                </div>
+                <input 
+                  required={!formData.no_cuit} 
+                  disabled={formData.no_cuit}
+                  type="text" 
+                  name="cuit" 
+                  value={formData.no_cuit ? '' : formData.cuit} 
+                  onChange={handleChange} 
+                  placeholder={formData.no_cuit ? "No aplica verificación por CUIT" : "Ej: 30112233445"}
+                  className={`w-full px-4 py-2 border rounded-xl outline-none transition-all ${formData.no_cuit ? 'bg-gray-50 text-gray-400 border-gray-200' : 'focus:ring-2 focus:ring-blue-500'}`} 
+                />
               </div>
             </>
           )}

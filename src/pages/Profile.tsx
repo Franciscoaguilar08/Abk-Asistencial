@@ -24,13 +24,15 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     jurisdiction: user.jurisdiction || '',
     specialty: user.specialty || '',
     // Clinic
-    cuit: user.cuit || '',
+    cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
+    no_cuit: user.cuit === 'N/A',
     address: user.address || ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target as HTMLInputElement;
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +50,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
           jurisdiction: formData.jurisdiction,
           specialty: formData.specialty
         } : {
-          cuit: formData.cuit,
+          cuit: formData.no_cuit ? 'N/A' : formData.cuit,
           address: formData.address
         })
       };
@@ -186,13 +188,32 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">CUIT</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium text-gray-700">CUIT</label>
+                    <label className="flex items-center gap-1.5 text-xs text-blue-600 font-medium cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        name="no_cuit" 
+                        checked={formData.no_cuit} 
+                        onChange={handleChange} 
+                        className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      No aplica
+                    </label>
+                  </div>
                   <input 
                     type="text" 
                     name="cuit" 
-                    value={formData.cuit} 
+                    value={formData.no_cuit ? '' : formData.cuit} 
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                    disabled={formData.no_cuit}
+                    placeholder={formData.no_cuit ? "No aplica verificación por CUIT" : "Ej: 30112233445"}
+                    className={cn(
+                      "w-full px-3 py-2 border rounded-md outline-none transition-all",
+                      formData.no_cuit 
+                        ? "bg-gray-100 text-gray-400 border-gray-200" 
+                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                    )} 
                   />
                 </div>
                 <div className="md:col-span-2">
