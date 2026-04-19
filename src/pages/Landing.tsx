@@ -178,7 +178,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               transition={{ delay: 0.1 }}
               className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10 leading-relaxed"
             >
-              Conectamos talento del sector salud con instituciones y productoras que necesitan resolver guardias y coberturas de forma rápida, confiable y verificada.
+              Conectamos profesionales del sector salud con instituciones y productoras que necesitan resolver guardias y coberturas de forma rápida, confiable y verificada.
             </motion.p>
             
             <motion.div 
@@ -189,28 +189,17 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             >
               <button 
                 onClick={() => openAuth('register', 'doctor')}
-                className="w-full sm:w-auto px-8 py-4 bg-white border-2 border-gray-200 text-gray-800 rounded-full font-bold hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+                className="w-full sm:w-auto px-10 py-5 bg-blue-600 text-white rounded-full font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-200"
               >
                 <Stethoscope className="w-5 h-5" />
                 Soy profesional
               </button>
               <button 
                 onClick={() => openAuth('register', 'clinic')}
-                className="w-full sm:w-auto px-8 py-4 bg-gray-900 text-white rounded-full font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-sm"
+                className="w-full sm:w-auto px-10 py-5 bg-white border-2 border-gray-900 text-gray-900 rounded-full font-bold hover:bg-gray-50 transition-all flex items-center justify-center gap-2 shadow-sm"
               >
                 <Building2 className="w-5 h-5" />
                 Soy institución
-              </button>
-            </motion.div>
-            
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mt-8"
-            >
-              <button onClick={() => openAuth('login')} className="text-sm text-gray-500 hover:text-gray-900 font-medium">
-                ¿Ya tenés cuenta? <span className="text-blue-600 hover:underline">Ingresar</span>
               </button>
             </motion.div>
           </div>

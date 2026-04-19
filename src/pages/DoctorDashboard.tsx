@@ -423,10 +423,6 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
     }
   };
 
-  const handleSyncCalendar = () => {
-    toast.success("📅 Evento añadido a tu Google Calendar.");
-  };
-
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col">
       <div className="p-5 flex-1 space-y-4">
@@ -598,14 +594,6 @@ function ShiftCard({ shift, onApply, onWithdraw, onRefresh, onOpenChat, onNegoti
                     Chatear con {shift.clinic_name}
                   </button>
                 )}
-
-                <button 
-                  onClick={handleSyncCalendar}
-                  className="w-full py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <CalendarPlus className="w-4 h-4" />
-                  Sincronizar Calendario
-                </button>
 
                 {isShiftTomorrow && !shift.attendance_confirmed && (
                   <button 

@@ -62,6 +62,40 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
+    const price = Number(formData.get('price'));
+    const dateStr = formData.get('date') as string;
+    const startTime = formData.get('startTime') as string;
+    const endTime = formData.get('endTime') as string;
+
+    // 1. Validate Price
+    if (price <= 0) {
+      toast.error('El honorario debe ser mayor a 0');
+      return;
+    }
+
+    // 2. Validate Date (not in the past)
+    const selectedDate = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      toast.error('La fecha no puede ser en el pasado');
+      return;
+    }
+
+    // 3. Validate Times
+    if (!startTime || !endTime) {
+      toast.error('Debes ingresar horario de inicio y fin');
+      return;
+    }
+
+    // Basic time validation: if it's the same day, start should be before end 
+    // (Note: some shifts might cross midnight, but usually start/end are on the same 24h block in this simple UI)
+    if (startTime === endTime) {
+      toast.error('El horario de inicio y fin no pueden ser iguales');
+      return;
+    }
+
     const newShift = {
       clinic_id: user.id,
       clinic_name: user.name,
@@ -69,11 +103,11 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       specialty: formData.get('specialty') as string,
       type: formData.get('type') as string,
       description: formData.get('description') as string,
-      price: Number(formData.get('price')),
+      price: price,
       is_negotiable: formData.get('is_negotiable') === 'on',
-      date: new Date(formData.get('date') as string).toISOString().split('T')[0],
-      start_time: formData.get('startTime') as string,
-      end_time: formData.get('endTime') as string,
+      date: dateStr,
+      start_time: startTime,
+      end_time: endTime,
       zone: formData.get('zone') as string,
       location: formData.get('location') as string,
       requirements: (formData.get('requirements') as string).split(',').map(s => s.trim()).filter(Boolean),
@@ -84,12 +118,41 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     };
 
     try {
-      const { error } = await supabase.from('shifts').insert([newShift]);
+      const { data: newShiftResult, error } = await supabase.from('shifts').insert([newShift]).select().single();
       if (error) throw error;
       
       setIsModalOpen(false);
       toast.success('Oportunidad publicada exitosamente');
       fetchShifts();
+
+      // Notify doctors via email (background-like process)
+      try {
+        // Fetch all doctors to get their emails
+        const { data: doctors } = await supabase
+          .from('users')
+          .select('email')
+          .eq('role', 'doctor');
+
+        if (doctors && doctors.length > 0) {
+          const recipientEmails = doctors.map(d => d.email).filter(Boolean);
+          
+          if (recipientEmails.length > 0) {
+            await fetch('/api/notify-new-shift', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                shiftData: {
+                  ...newShift,
+                  date: format(new Date(newShift.date), 'dd/MM/yyyy', { locale: es })
+                },
+                recipients: recipientEmails
+              })
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Non-blocking error sending notifications:", err);
+      }
     } catch (error) {
       console.error("Error creating shift:", error);
       toast.error("Error al publicar la oportunidad.");
@@ -238,7 +301,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Honorarios ($ ARS)</label>
-                  <input type="number" name="price" required placeholder="Ej: 150000" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input type="number" name="price" required min="1" placeholder="Ej: 150000" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   
                   <label className="flex items-center gap-2 mt-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" name="is_negotiable" className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
@@ -247,7 +310,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                  <input type="date" name="date" required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input type="date" name="date" required min={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
