@@ -19,6 +19,10 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
   const [viewedProfileData, setViewedProfileData] = useState<User | null>(null);
+  const [dismissedShiftIds, setDismissedShiftIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem(`dismissed_shifts_${user.id}`);
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     fetchShifts();
@@ -51,6 +55,9 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       
       // Filter only shifts relevant to me
       const myData = (data as Shift[]).filter(s => {
+        // Ignorar si el usuario eligió ocultarla
+        if (dismissedShiftIds.includes(s.id)) return false;
+
         if (['confirmed', 'completed', 'noshow', 'cancelled_by_clinic'].includes(s.status)) {
           return s.assigned_doctor_id === user.id;
         }
@@ -63,6 +70,14 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDismissShift = (shiftId: string) => {
+    const newDismissed = [...dismissedShiftIds, shiftId];
+    setDismissedShiftIds(newDismissed);
+    localStorage.setItem(`dismissed_shifts_${user.id}`, JSON.stringify(newDismissed));
+    setShifts(prev => prev.filter(s => s.id !== shiftId));
+    toast.success('Evento quitado de tu lista principal.');
   };
 
   const fetchProfileData = async (userId: string) => {
@@ -148,6 +163,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
               userId={user.id} 
               userVerificationStatus={user.verification_status}
               onWithdraw={() => handleWithdraw(shift.id)}
+              onDelete={() => handleDismissShift(shift.id)}
               onRefresh={fetchShifts}
               onOpenChat={() => setActiveChat({ shiftId: shift.id, receiverId: shift.clinic_id, receiverName: shift.clinic_name })}
               onViewProfile={() => fetchProfileData(shift.clinic_id)}

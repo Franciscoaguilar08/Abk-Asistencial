@@ -22,6 +22,7 @@ interface ShiftCardProps {
   userId?: string;
   userRole?: 'doctor' | 'clinic';
   userVerificationStatus?: string;
+  onDelete?: () => void;
 }
 
 export default function ShiftCard({ 
@@ -32,6 +33,7 @@ export default function ShiftCard({
   onOpenChat, 
   onNegotiate, 
   onViewProfile, 
+  onDelete,
   isMyShift, 
   userId, 
   userRole = 'doctor',
@@ -40,6 +42,7 @@ export default function ShiftCard({
   const isVerified = userVerificationStatus === 'verified';
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
+  const isTerminal = shift.status === 'completed' || shift.status === 'noshow' || shift.status === 'cancelled_by_clinic';
   
   const shiftDate = new Date(shift.date);
   const isShiftTomorrow = isTomorrow(shiftDate);
@@ -123,16 +126,28 @@ export default function ShiftCard({
             <p className="text-sm font-medium text-gray-600">{shift.specialty}</p>
           </div>
           {isMyShift && userRole === 'doctor' && (
-            <span className={cn(
-              "px-2.5 py-1 rounded-full text-xs font-semibold",
-              shift.status === 'noshow' ? "bg-red-100 text-red-700" :
-              shift.status === 'cancelled_by_clinic' ? "bg-orange-100 text-orange-700" :
-              isAssigned ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
-            )}>
-              {shift.status === 'noshow' ? 'Ausencia' : 
-               shift.status === 'cancelled_by_clinic' ? 'Cancelada por Clínica' :
-               isAssigned ? 'Confirmada' : 'Pendiente'}
-            </span>
+            <div className="flex flex-col items-end gap-2">
+              <span className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap",
+                shift.status === 'noshow' ? "bg-red-100 text-red-700" :
+                shift.status === 'cancelled_by_clinic' ? "bg-orange-100 text-orange-700" :
+                isAssigned ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+              )}>
+                {shift.status === 'noshow' ? 'Ausencia' : 
+                shift.status === 'cancelled_by_clinic' ? 'Cancelada por Clínica' :
+                isAssigned ? 'Confirmada' : 'Pendiente'}
+              </span>
+              {isTerminal && onDelete && (
+                <button 
+                  onClick={onDelete}
+                  className="p-1 px-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-all flex items-center gap-1"
+                  title="Quitar de mi vista"
+                >
+                  <XCircle className="w-3 h-3" />
+                  Quitar
+                </button>
+              )}
+            </div>
           )}
         </div>
 

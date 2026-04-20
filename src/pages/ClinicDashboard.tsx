@@ -293,6 +293,22 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     }
   };
 
+  const handleDeleteShift = async (shiftId: string) => {
+    try {
+      const { error } = await supabase
+        .from('shifts')
+        .delete()
+        .eq('id', shiftId);
+
+      if (error) throw error;
+      toast.success('Publicación eliminada definitivamente.');
+      setShifts(prev => prev.filter(s => s.id !== shiftId));
+    } catch (error) {
+      console.error("Error deleting shift:", error);
+      toast.error('No se pudo eliminar la publicación.');
+    }
+  };
+
   if (loading) {
     return <div className="py-12 text-center text-gray-500">Cargando panel...</div>;
   }
@@ -326,6 +342,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
                 onViewProfile={fetchProfileData}
                 onMarkNoShow={handleMarkNoShow}
+                onDelete={() => handleDeleteShift(shift.id)}
               />
             ))
           ) : (
@@ -521,8 +538,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   );
 }
 
-function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onViewProfile, onMarkNoShow }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void, onOpenChat: (docId: string, docName: string) => void, onViewProfile: (userId: string) => void, onMarkNoShow: (sId: string, dId: string) => void }) {
+function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onViewProfile, onMarkNoShow, onDelete }: { shift: Shift, onAssign: (shiftId: string, doctorId: string) => void, onCancel: () => void, onRefresh: () => void, onOpenChat: (docId: string, docName: string) => void, onViewProfile: (userId: string) => void, onMarkNoShow: (sId: string, dId: string) => void, onDelete: () => void }) {
   const isConfirmed = shift.status === 'confirmed' || shift.status === 'completed' || shift.status === 'noshow';
+  const isTerminal = shift.status === 'completed' || shift.status === 'noshow' || shift.status === 'cancelled_by_clinic' || shift.status === 'cancelled';
   const isCancelled = shift.status === 'cancelled';
   const [assignedDoctor, setAssignedDoctor] = useState<User | null>(null);
 
@@ -636,6 +654,19 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
                 onClick={() => setIsCancelModalOpen(true)}
                 className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors border border-transparent hover:border-red-200"
                 title="Eliminar Guardia"
+            >
+                <XCircle className="w-5 h-5" />
+            </button>
+          )}
+          {isTerminal && (
+            <button 
+                onClick={() => {
+                  if (window.confirm('¿Deseas eliminar esta publicación de tu historial? Se borrará definitivamente.')) {
+                    onDelete();
+                  }
+                }}
+                className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-lg transition-colors border border-transparent"
+                title="Quitar del historial"
             >
                 <XCircle className="w-5 h-5" />
             </button>
