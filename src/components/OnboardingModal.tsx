@@ -7,11 +7,11 @@ import { toast } from 'sonner';
 interface OnboardingModalProps {
   user: User;
   onComplete: (updatedUser: User) => void;
+  onLogout?: () => void;
 }
 
-export default function OnboardingModal({ user, onComplete }: OnboardingModalProps) {
+export default function OnboardingModal({ user, onComplete, onLogout }: OnboardingModalProps) {
   const [loading, setLoading] = useState(false);
-  const [simulating, setSimulating] = useState(false);
   const [formData, setFormData] = useState({
     name: user.name || '',
     dni: '',
@@ -34,7 +34,7 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
     try {
       const updatePayload: Partial<User> = {
         name: formData.name,
-        verification_status: 'verified', // Auto-verify in Beta Phase
+        verification_status: 'verified', // Auto-verify in Beta Phase for now
       };
 
       if (user.role === 'doctor') {
@@ -55,80 +55,58 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
         
       if (error) throw error;
 
-      toast.success('¡Perfil activado! Gracias por sumarte a la Fase Beta. Ya podés operar sin restricciones.');
+      toast.success('¡Perfil activado! Ya podés acceder a la plataforma.');
       onComplete(data as User);
     } catch (error) {
       console.error('Error submitting data:', error);
-      toast.error('Error al enviar los datos para revisión.');
+      toast.error('Error al enviar los datos del perfil.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] px-4 text-gray-900">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative overflow-hidden">
-        {user.verification_status === 'pending' ? (
-          <div className="py-8 flex flex-col items-center justify-center text-center space-y-6">
-            <div className="bg-green-100 text-green-600 p-4 rounded-full">
-              <ShieldCheck className="w-12 h-12" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-bold">¡Activación Beta Disponible!</h3>
-              <p className="text-gray-600 leading-relaxed">
-                Estamos en <strong>Fase Beta</strong>. Ya no necesitás esperar la validación manual para empezar a usar ABK.
-              </p>
-            </div>
-            <button 
-              onClick={handleSubmit} 
-              disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-200"
-            >
-              {loading ? 'Activando...' : 'Activar mi cuenta ahora'}
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="mb-6 flex gap-4">
-          <div className={`p-3 rounded-xl shrink-0 ${user.role === 'doctor' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-            {user.role === 'doctor' ? <FileCheck2 className="w-8 h-8" /> : <Building2 className="w-8 h-8" />}
+    <div className="fixed inset-0 bg-gray-50 flex items-center justify-center z-[100] px-4 text-gray-900">
+      <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-lg relative border border-gray-100">
+        <div className="mb-8 flex gap-5 items-start">
+          <div className={`p-4 rounded-2xl shrink-0 ${user.role === 'doctor' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+            {user.role === 'doctor' ? <FileCheck2 className="w-10 h-10" /> : <Building2 className="w-10 h-10" />}
           </div>
           <div>
-            <h2 className="text-xl font-bold">Registro Fase Beta</h2>
-            <p className="text-sm text-gray-600 mt-1 leading-relaxed text-left">
+            <h2 className="text-2xl font-bold tracking-tight">Completá tu perfil</h2>
+            <p className="text-gray-500 mt-2 leading-relaxed text-sm">
               {user.role === 'doctor' 
-                ? 'Completá tus datos básicos para empezar. Durante este mes de prueba, la verificación es instantánea para que puedas testear la red.'
-                : 'Para publicar guardias durante la beta, solo necesitamos identificar tu institución.'}
+                ? 'Necesitamos tus datos profesionales para que las instituciones puedan contratarte de forma segura.'
+                : 'Identificá tu institución para poder publicar y gestionar tus búsquedas médicas.'}
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {user.role === 'doctor' ? (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Nombre Completo</label>
+                <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">DNI</label>
-                  <input required type="number" name="dni" value={formData.dni} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">DNI</label>
+                  <input required type="number" name="dni" value={formData.dni} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Especialidad</label>
-                  <input required type="text" name="specialty" value={formData.specialty} onChange={handleChange} placeholder="Ej: Clínica Médica" className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Especialidad</label>
+                  <input required type="text" name="specialty" value={formData.specialty} onChange={handleChange} placeholder="Ej: Pediatría" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Matrícula (M.N. / M.P.)</label>
-                  <input required type="text" name="license_number" value={formData.license_number} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Matrícula (M.N. / M.P.)</label>
+                  <input required type="text" name="license_number" value={formData.license_number} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Jurisdicción</label>
-                  <select required name="jurisdiction" value={formData.jurisdiction} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Jurisdicción</label>
+                  <select required name="jurisdiction" value={formData.jurisdiction} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow">
                     <option value="">Seleccionar...</option>
                     <option value="Nacional">Nacional (M.N.)</option>
                     <option value="Buenos Aires">Provincia de Buenos Aires</option>
@@ -142,13 +120,13 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
           ) : (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Razón Social o Nombre Público</label>
-                <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" />
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Razón Social o Nombre Público</label>
+                <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
               </div>
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-sm font-medium text-gray-700">CUIT (Sin guiones)</label>
-                  <label className="flex items-center gap-1.5 text-xs text-blue-600 font-medium cursor-pointer">
+                <div className="flex justify-between items-center mb-1.5 ml-1">
+                  <label className="block text-sm font-semibold text-gray-700">CUIT (Sin guiones)</label>
+                  <label className="flex items-center gap-1.5 text-xs text-blue-600 font-bold cursor-pointer">
                     <input 
                       type="checkbox" 
                       name="no_cuit" 
@@ -156,7 +134,7 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
                       onChange={handleChange} 
                       className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    No aplico / No tengo
+                    No tengo CUIT
                   </label>
                 </div>
                 <input 
@@ -167,26 +145,33 @@ export default function OnboardingModal({ user, onComplete }: OnboardingModalPro
                   value={formData.no_cuit ? '' : formData.cuit} 
                   onChange={handleChange} 
                   placeholder={formData.no_cuit ? "No aplica verificación por CUIT" : "Ej: 30112233445"}
-                  className={`w-full px-4 py-2 border rounded-xl outline-none transition-all ${formData.no_cuit ? 'bg-gray-50 text-gray-400 border-gray-200' : 'focus:ring-2 focus:ring-blue-500'}`} 
+                  className={`w-full px-4 py-3 border rounded-xl outline-none transition-all ${formData.no_cuit ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus:ring-2 focus:ring-blue-500'}`} 
                 />
               </div>
             </>
           )}
 
-          <div className="pt-4">
+          <div className="pt-6 space-y-3">
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
             >
-              {loading ? 'Preparando...' : 'Activar Perfil Beta'}
+              {loading ? 'Guardando...' : 'Completar perfil y entrar'}
               {!loading && <ChevronRight className="w-5 h-5" />}
             </button>
-            <p className="text-[10px] text-blue-600 font-bold text-center mt-3 uppercase tracking-wider">Verificación instantánea habilitada por tiempo limitado</p>
+
+            {onLogout && (
+              <button 
+                type="button" 
+                onClick={onLogout}
+                className="w-full py-3 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Cerrar sesión
+              </button>
+            )}
           </div>
         </form>
-          </>
-        )}
       </div>
     </div>
   );

@@ -79,6 +79,21 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
   }
 
+  if (currentUser && currentUser.verification_status === 'unverified' && currentUser.role !== null && currentUser.email !== 'franciscoaguilar008@gmail.com') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+        <Toaster position="top-center" richColors />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <OnboardingModal 
+            user={currentUser} 
+            onComplete={setCurrentUser} 
+            onLogout={logout}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Router>
       <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
@@ -87,9 +102,6 @@ export default function App() {
           <div className="bg-yellow-50 border-b border-yellow-200 p-4 text-center text-yellow-800 text-sm">
             <strong>Atención:</strong> Las variables de entorno de Supabase no están configuradas. La aplicación no funcionará correctamente hasta que agregues <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>.
           </div>
-        )}
-        {currentUser && currentUser.verification_status !== 'verified' && currentUser.email !== 'franciscoaguilar008@gmail.com' && (
-          <OnboardingModal user={currentUser} onComplete={setCurrentUser} />
         )}
         <Navbar currentUser={currentUser} onLogout={logout} />
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
