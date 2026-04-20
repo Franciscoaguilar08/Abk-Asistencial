@@ -40,12 +40,21 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   useEffect(() => {
     fetchShifts();
     
-    // Auto-refresh periodically to keep data "live" without requiring manual reload
-    const interval = setInterval(() => {
-      fetchShifts();
-    }, 10000);
+    // Subscribe to real-time changes on the shifts table
+    const channel = supabase
+      .channel('shifts-doctor-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shifts' },
+        () => {
+          fetchShifts();
+        }
+      )
+      .subscribe();
     
-    return () => clearInterval(interval);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchShifts = async () => {
@@ -65,7 +74,14 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   };
   
   const availableShifts = shifts.filter(s => s.status === 'open' && !s.applicants.includes(user.id));
-  const myShifts = shifts.filter(s => s.applicants.includes(user.id) || s.assigned_doctor_id === user.id);
+  const myShifts = shifts.filter(s => {
+    // Si la guardia ya tiene un resultado (confirmada, completada, etc.), solo mostrarla si YO soy el asignado
+    if (['confirmed', 'completed', 'noshow', 'cancelled_by_clinic'].includes(s.status)) {
+      return s.assigned_doctor_id === user.id;
+    }
+    // Si sigue abierta o pendiente, mostrarla si soy postulante o asignado
+    return s.applicants.includes(user.id) || s.assigned_doctor_id === user.id;
+  });
 
   // Extract unique zones and specialties for the filters
   const availableZones = ['Todas', ...Array.from(new Set(shifts.map(s => s.zone).filter(Boolean)))];

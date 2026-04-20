@@ -18,11 +18,6 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
 
     fetchNotifications();
     
-    // Auto-refresh periodically to keep notifications "live"
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 10000);
-
     const channel = supabase
       .channel(`notifications_${currentUser.id}`)
       .on(
@@ -37,7 +32,6 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
       .subscribe();
 
     return () => {
-      clearInterval(interval);
       supabase.removeChannel(channel);
     };
   }, [currentUser]);

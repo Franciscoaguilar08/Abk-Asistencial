@@ -34,12 +34,26 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   useEffect(() => {
     fetchShifts();
     
-    // Auto-refresh periodically to keep data "live" without requiring manual reload
-    const interval = setInterval(() => {
-      fetchShifts();
-    }, 10000);
+    // Subscribe to real-time changes on the shifts table for this specific clinic
+    const channel = supabase
+      .channel(`shifts-clinic-${user.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'shifts', 
+          filter: `clinic_id=eq.${user.id}` 
+        },
+        () => {
+          fetchShifts();
+        }
+      )
+      .subscribe();
     
-    return () => clearInterval(interval);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user.id]);
 
   const fetchShifts = async () => {
