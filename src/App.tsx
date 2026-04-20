@@ -13,6 +13,7 @@ import Profile from './pages/Profile';
 import DoctorDashboard from './pages/DoctorDashboard';
 import ClinicDashboard from './pages/ClinicDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import Feed from './pages/Feed';
 import Navbar from './components/Navbar';
 import OnboardingModal from './components/OnboardingModal';
 import { MessageSquarePlus } from 'lucide-react';
@@ -110,7 +111,7 @@ export default function App() {
               path="/" 
               element={
                 currentUser ? (
-                  <Navigate to={currentUser.role === 'doctor' ? '/doctor' : '/clinic'} replace />
+                  <Feed user={currentUser} />
                 ) : (
                   <Landing onLoginSuccess={(user) => setCurrentUser(user)} />
                 )

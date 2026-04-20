@@ -1,0 +1,347 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { User, Shift } from '../types';
+import ViewProfileModal from '../components/ViewProfileModal';
+import ShiftCard from '../components/ShiftCard';
+import { 
+  Globe, Filter, Search, Building2, BriefcaseMedical, 
+  LayoutDashboard, TrendingUp, Sparkles, XCircle, DollarSign
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '../lib/utils';
+import ChatModal from '../components/ChatModal';
+
+interface FeedProps {
+  user: User;
+}
+
+export default function Feed({ user }: FeedProps) {
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
+  const [viewedProfileData, setViewedProfileData] = useState<User | null>(null);
+  
+  // States for filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedZone, setSelectedZone] = useState('Todas');
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [selectedSpecialty, setSelectedSpecialty] = useState('Todas');
+
+  const [negotiatingShiftId, setNegotiatingShiftId] = useState<string | null>(null);
+  const [proposedPrice, setProposedPrice] = useState<string>('');
+
+  useEffect(() => {
+    fetchShifts();
+    
+    const channel = supabase
+      .channel('feed-shifts-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shifts' },
+        () => {
+          fetchShifts();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchShifts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('status', 'open')
+        .order('date', { ascending: true });
+      
+      if (error) throw error;
+      setShifts(data as Shift[]);
+    } catch (error) {
+      console.error("Error fetching shifts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProfileData = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+      if (error) throw error;
+      setViewedProfileData(data as User);
+    } catch (err) {
+      toast.error('No se pudo cargar el perfil');
+    }
+  };
+
+  const handleApply = async (shiftId: string, customPrice?: number) => {
+    try {
+      if (user.verification_status !== 'verified') {
+        toast.error('Tu cuenta está en proceso de verificación. No puedes postularte aún.');
+        return;
+      }
+
+      const shift = shifts.find(s => s.id === shiftId);
+      if (!shift) return;
+
+      if (shift.applicants.includes(user.id)) {
+        toast.error('Ya te has postulado a esta oportunidad');
+        return;
+      }
+
+      const newApplicants = [...shift.applicants, user.id];
+      const newProposals = { ...(shift.applicant_proposals || {}) };
+      
+      if (customPrice) {
+        newProposals[user.id] = customPrice;
+      }
+
+      const { error } = await supabase
+        .from('shifts')
+        .update({ 
+          applicants: newApplicants,
+          applicant_proposals: newProposals
+        })
+        .eq('id', shiftId);
+
+      if (error) throw error;
+
+      // Create notification for clinic
+      await supabase.from('notifications').insert({
+        user_id: shift.clinic_id,
+        title: 'Nueva Postulación',
+        message: `El Dr. ${user.name} se ha postulado para la guardia de ${shift.specialty}.`,
+        type: 'application',
+        shift_id: shiftId
+      });
+
+      toast.success(customPrice ? 'Oferta enviada con éxito' : 'Postulación enviada con éxito');
+      setNegotiatingShiftId(null);
+      fetchShifts();
+    } catch (error) {
+      toast.error('Error al enviar la postulación');
+    }
+  };
+
+  // Filter logic
+  const filteredShifts = shifts.filter(s => {
+    const matchesSearch = s.clinic_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         s.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         s.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesZone = selectedZone === 'Todas' || s.zone === selectedZone;
+    const matchesCategory = selectedCategory === 'Todas' || s.category === selectedCategory;
+    const matchesSpecialty = selectedSpecialty === 'Todas' || s.specialty === selectedSpecialty;
+    
+    // Professionals don't see shifts they already applied to in the "feed" to avoid clutter?
+    // User requested "un lugar común", usually as a professional you want to see what's new.
+    // If I already applied, I might still want to see it but marked. 
+    // For now let's keep it simple: show all open shifts.
+    return matchesSearch && matchesZone && matchesCategory && matchesSpecialty;
+  });
+
+  const availableZones = ['Todas', ...Array.from(new Set(shifts.map(s => s.zone).filter(Boolean)))];
+  const availableSpecialties = ['Todas', ...Array.from(new Set(shifts.map(s => s.specialty)))];
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
+        <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-gray-500 font-medium">Actualizando el feed de la red...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
+      {/* Feed Header */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200">
+        <div className="absolute top-0 right-0 p-8 opacity-10">
+          <Globe className="w-48 h-48" />
+        </div>
+        <div className="relative z-10 space-y-2">
+          <div className="flex items-center gap-2 text-blue-100 font-bold mb-2 uppercase tracking-widest text-xs">
+            <Sparkles className="w-4 h-4" />
+            Red ABK en Tiempo Real
+          </div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight">Oportunidades de la Red</h1>
+          <p className="text-blue-100 max-w-xl text-lg font-medium opacity-90 leading-relaxed">
+            Descubrí y conectá con instituciones líderes. Todas las ofertas de la comunidad en un solo lugar.
+          </p>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sticky top-[72px] z-30 transition-all hover:shadow-md">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="relative col-span-1 md:col-span-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Buscar..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+            />
+          </div>
+          <select 
+            value={selectedSpecialty}
+            onChange={(e) => setSelectedSpecialty(e.target.value)}
+            className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+          >
+            {availableSpecialties.map(s => <option key={s} value={s}>{s === 'Todas' ? 'Todas las Especialidades' : s}</option>)}
+          </select>
+          <select 
+            value={selectedZone}
+            onChange={(e) => setSelectedZone(e.target.value)}
+            className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+          >
+            {availableZones.map(z => <option key={z} value={z}>{z === 'Todas' ? 'Todas las Zonas' : z}</option>)}
+          </select>
+          <select 
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm transition-all"
+          >
+            <option value="Todas">Todas las Categorías</option>
+            <option value="guardia">Guardia</option>
+            <option value="evento">Evento</option>
+            <option value="empleo">Empleo</option>
+            <option value="suplencia">Suplencia</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Grouped Feed Content */}
+      {filteredShifts.length > 0 ? (
+        <div className="space-y-12 pb-12">
+          {Object.entries(
+            filteredShifts.reduce((acc, shift) => {
+              const clinicName = shift.clinic_name || 'Institución';
+              if (!acc[clinicName]) acc[clinicName] = [];
+              acc[clinicName].push(shift);
+              return acc;
+            }, {} as Record<string, Shift[]>)
+          ).map(([clinicName, groupShifts]) => (
+            <div key={clinicName} className="group animate-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 shadow-sm transition-transform group-hover:scale-110">
+                  <Building2 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 leading-none">{clinicName}</h3>
+                  <p className="text-sm text-gray-500 mt-1 font-medium">{groupShifts.length} {groupShifts.length === 1 ? 'publicación activa' : 'publicaciones activas'}</p>
+                </div>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                {groupShifts.map(shift => (
+                  <ShiftCard 
+                    key={shift.id} 
+                    shift={shift} 
+                    userId={user.id}
+                    userRole={user.role as 'doctor' | 'clinic'}
+                    userVerificationStatus={user.verification_status}
+                    isMyShift={shift.applicants.includes(user.id)}
+                    onApply={() => handleApply(shift.id)} 
+                    onNegotiate={() => {
+                      setNegotiatingShiftId(shift.id);
+                      setProposedPrice(shift.price.toString());
+                    }}
+                    onRefresh={fetchShifts} 
+                    onViewProfile={() => fetchProfileData(shift.clinic_id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+          <div className="bg-gray-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+            <LayoutDashboard className="w-12 h-12 text-gray-300" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900">No se encontraron resultados</h3>
+          <p className="text-gray-500 mt-2 max-w-sm mx-auto">Probá ajustando los filtros o buscando otros términos.</p>
+          <button 
+            onClick={() => {
+              setSearchTerm('');
+              setSelectedZone('Todas');
+              setSelectedCategory('Todas');
+              setSelectedSpecialty('Todas');
+            }}
+            className="mt-6 text-blue-600 font-bold hover:underline"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      )}
+
+      {/* Modals */}
+      {viewedProfileData && (
+        <ViewProfileModal user={viewedProfileData} onClose={() => setViewedProfileData(null)} />
+      )}
+
+      {negotiatingShiftId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden p-8 relative animate-in zoom-in-95 duration-200">
+            <button onClick={() => setNegotiatingShiftId(null)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors">
+              <XCircle className="w-6 h-6" />
+            </button>
+            <h2 className="text-2xl font-black text-gray-900 mb-2">Ofertar nuevo precio</h2>
+            <p className="text-gray-600 mb-8 leading-relaxed">
+              Ingresá el honorario por el cual estarías dispuesto a cubrir esta oportunidad. La institución será notificada de tu propuesta.
+            </p>
+            
+            <div className="mb-8 p-6 bg-blue-50 rounded-2xl border border-blue-100">
+              <label className="block text-xs font-bold text-blue-700 uppercase tracking-widest mb-2">Precio propuesto ($ ARS)</label>
+              <div className="relative">
+                <DollarSign className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6 text-blue-600" />
+                <input 
+                  type="number" 
+                  value={proposedPrice}
+                  onChange={(e) => setProposedPrice(e.target.value)}
+                  className="w-full pl-8 pr-4 py-2 bg-transparent border-b-2 border-blue-200 focus:border-blue-600 outline-none text-3xl font-black text-blue-900 transition-colors" 
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setNegotiatingShiftId(null)}
+                className="flex-1 py-4 rounded-2xl font-bold bg-gray-50 text-gray-600 hover:bg-gray-100 transition-all border border-gray-100"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  const price = Number(proposedPrice);
+                  if (price > 0) {
+                    handleApply(negotiatingShiftId, price);
+                  } else {
+                    toast.error('Por favor ingresa un precio válido');
+                  }
+                }}
+                className="flex-1 py-4 rounded-2xl font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all hover:-translate-y-0.5 active:translate-y-0"
+              >
+                Enviar Oferta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeChat && (
+        <ChatModal 
+          shiftId={activeChat.shiftId}
+          currentUserId={user.id}
+          receiverId={activeChat.receiverId}
+          receiverName={activeChat.receiverName}
+          onClose={() => setActiveChat(null)}
+        />
+      )}
+    </div>
+  );
+}

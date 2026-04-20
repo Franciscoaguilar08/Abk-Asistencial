@@ -3,11 +3,12 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare } from 'lucide-react';
+import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare, BriefcaseMedical, LayoutDashboard, Globe, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, areShiftsOverlapping } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
 import ViewProfileModal from '../components/ViewProfileModal';
+import ShiftCard from '../components/ShiftCard';
 
 interface ClinicDashboardProps {
   user: User;
@@ -34,7 +35,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   useEffect(() => {
     fetchShifts();
     
-    // Subscribe to real-time changes on the shifts table for this specific clinic
+    // Subscribe to shifts table for this specific clinic
     const channel = supabase
       .channel(`shifts-clinic-${user.id}`)
       .on(
@@ -42,8 +43,8 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         { 
           event: '*', 
           schema: 'public', 
-          table: 'shifts', 
-          filter: `clinic_id=eq.${user.id}` 
+          table: 'shifts',
+          filter: `clinic_id=eq.${user.id}`
         },
         () => {
           fetchShifts();
@@ -297,43 +298,52 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 italic transition-all hover:shadow-md">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
-          <p className="text-gray-600">Panel de gestión de guardias y eventos</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Publicaciones</h1>
+          <p className="text-gray-500 mt-1">Gestioná tus búsquedas y asignaciones.</p>
         </div>
-        
-        <button
+        <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-100 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
         >
           <Plus className="w-5 h-5" />
-          Publicar Oportunidad
+          Nueva Publicación
         </button>
       </div>
 
-      <div className="grid gap-6">
-        {shifts.length > 0 ? (
-          shifts.map(shift => (
-            <ClinicShiftCard 
-              key={shift.id} 
-              shift={shift} 
-              onAssign={handleAssign} 
-              onCancel={() => handleCancel(shift.id)}
-              onRefresh={fetchShifts}
-              onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
-              onViewProfile={fetchProfileData}
-              onMarkNoShow={handleMarkNoShow}
-            />
-          ))
-        ) : (
-          <div className="py-12 text-center text-gray-500 bg-white rounded-xl border border-gray-200 border-dashed">
-            <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-            <p className="text-lg font-medium text-gray-900">No tienes oportunidades publicadas</p>
-            <p>Publica una nueva guardia o evento para empezar a recibir postulantes.</p>
-          </div>
-        )}
+      <div className="space-y-6">
+        <div className="grid gap-6">
+          {shifts.length > 0 ? (
+            shifts.map(shift => (
+              <ClinicShiftCard 
+                key={shift.id} 
+                shift={shift} 
+                onAssign={handleAssign}
+                onCancel={() => handleCancel(shift.id)}
+                onRefresh={fetchShifts}
+                onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
+                onViewProfile={fetchProfileData}
+                onMarkNoShow={handleMarkNoShow}
+              />
+            ))
+          ) : (
+            <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-100">
+              <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Activity className="w-10 h-10 text-gray-300" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">No tenés publicaciones activas</h3>
+              <p className="text-gray-500 mt-2 max-w-sm mx-auto">Publicá una nueva guardia para empezar a recibir postulaciones de médicos calificados.</p>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="mt-6 text-blue-600 font-bold hover:underline"
+              >
+                Crear mi primera publicación →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {viewedProfileData && (

@@ -79,8 +79,17 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
             {currentUser && (
               <nav className="hidden md:flex items-center gap-6 border-l border-gray-100 ml-4 pl-6">
                 <Link to="/" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
-                  {currentUser.role === 'doctor' ? 'Buscar Guardias' : 'Mis Publicaciones'}
+                  Feed de la Red
                 </Link>
+                {currentUser.role === 'doctor' ? (
+                  <Link to="/doctor" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
+                    Mis Coberturas
+                  </Link>
+                ) : (
+                  <Link to="/clinic" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
+                    Mis Publicaciones
+                  </Link>
+                )}
                 <Link to="/profile" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
                   Mi Perfil
                 </Link>
