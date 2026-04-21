@@ -58,6 +58,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showRolePicker, setShowRolePicker] = useState(false);
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(false);
@@ -99,18 +100,44 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   }, []);
 
   const checkProfile = async (authUser: any) => {
-    const { data, error } = await supabase
+    const { data: existingProfile, error } = await supabase
       .from('users')
-      .select('id')
+      .select('*')
       .eq('id', authUser.id)
       .single();
 
     if (error && error.code === 'PGRST116') {
+      const metadataRole = authUser.user_metadata?.role;
+      if (metadataRole) {
+        // Auto-create profile if metadata has role (e.g. from email/pass registration)
+        try {
+          const newUser = {
+            id: authUser.id,
+            name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'Usuario',
+            email: authUser.email,
+            role: metadataRole,
+            verification_status: 'unverified'
+          };
+          const { data: createdProfile, error: insertError } = await supabase
+            .from('users')
+            .insert([newUser])
+            .select()
+            .single();
+          
+          if (!insertError && createdProfile) {
+            onLoginSuccess(createdProfile as User);
+            return;
+          }
+        } catch (e) {
+          console.error("Auto-profile creation failed", e);
+        }
+      }
+      
       // Session exists but no profile in public.users -> Show role picker
       setSessionUser(authUser);
       setShowRolePicker(true);
-    } else if (data) {
-      // Profile exists, App.tsx will handle the redirect
+    } else if (existingProfile) {
+      onLoginSuccess(existingProfile as User);
     }
   };
 
@@ -124,6 +151,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
     setAuthError(null);
     setUnconfirmedEmail(false);
     setResendSuccess(false);
+    setSignUpSuccess(false);
     setShowAuthModal(true);
   };
 
@@ -185,7 +213,8 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           setMode('login');
         } else if (!data.session && data.user) {
           // This happens if "Confirm Email" is enabled
-          setUnconfirmedEmail(true);
+          setSignUpSuccess(true);
+          setUnconfirmedEmail(false);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -535,16 +564,51 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="p-8 overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    {mode === 'login' ? 'Ingresar a ABK' : 'Crear tu cuenta'}
-                  </h3>
-                  <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:bg-gray-100 hover:text-gray-600 p-2 rounded-full transition">
-                    &times;
-                  </button>
-                </div>
+                {signUpSuccess ? (
+                  <div className="text-center py-8">
+                    <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Mail className="w-10 h-10 text-blue-600 animate-bounce" />
+                    </div>
+                    <h3 className="text-2xl font-black text-gray-900 mb-4">¡Revisá tu email!</h3>
+                    <p className="text-gray-600 mb-8 leading-relaxed">
+                      Te enviamos un link de activación a <span className="font-bold text-gray-900">{email}</span>.<br />
+                      Hacé clic para activar tu cuenta y empezar a trabajar.
+                    </p>
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 text-sm text-gray-500 mb-8">
+                      <p className="flex items-start gap-2 text-left">
+                        <BadgeCheck className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                        Asegúrate de revisar la carpeta de <span className="font-bold">Spam</span> si no lo ves en unos minutos.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => { setSignUpSuccess(false); setMode('login'); }}
+                      className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-gray-800 transition"
+                    >
+                      Volver al login
+                    </button>
+                    <button 
+                      onClick={handleResendConfirmation}
+                      disabled={loading}
+                      className="mt-6 text-sm text-blue-600 font-bold hover:underline"
+                    >
+                      {loading ? 'Reenviando...' : '¿No recibiste nada? Reenviar link'}
+                    </button>
+                    {resendSuccess && (
+                      <p className="mt-2 text-xs text-green-600 font-medium">¡Link reenviado con éxito!</p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        {mode === 'login' ? 'Ingresar a ABK' : 'Crear tu cuenta'}
+                      </h3>
+                      <button onClick={() => setShowAuthModal(false)} className="text-gray-400 hover:bg-gray-100 hover:text-gray-600 p-2 rounded-full transition">
+                        &times;
+                      </button>
+                    </div>
 
-                <div className="space-y-4 mb-6">
+                    <div className="space-y-4 mb-6">
                   <button
                     onClick={handleGoogleLogin}
                     disabled={loading}
@@ -688,6 +752,8 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                       </button>
                     </div>
                   </form>
+                </>
+              )}
               </div>
             </motion.div>
           </motion.div>
