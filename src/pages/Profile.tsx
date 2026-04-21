@@ -33,6 +33,26 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     address: user.address || ''
   });
 
+  // Keep formData in sync if user prop changes
+  useEffect(() => {
+    setFormData({
+      name: user.name || '',
+      phone: user.phone || '',
+      bio: user.bio || '',
+      dni: user.dni || '',
+      license_number: user.license_number || '',
+      jurisdiction: user.jurisdiction || '',
+      specialty: user.specialty || '',
+      availability: user.availability || '',
+      cv_url: user.cv_url || '',
+      license_image_url: user.license_image_url || '',
+      affidavit_accepted: user.affidavit_accepted || false,
+      cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
+      no_cuit: user.cuit === 'N/A',
+      address: user.address || ''
+    });
+  }, [user]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
@@ -44,22 +64,22 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     setLoading(true);
 
     try {
-      const updates = {
-        name: formData.name,
-        phone: formData.phone,
-        bio: formData.bio,
-        availability: formData.availability,
+      const updates: any = {
+        name: formData.name || null,
+        phone: formData.phone || null,
+        bio: formData.bio || null,
+        availability: formData.availability || null,
         ...(user.role === 'doctor' ? {
-          dni: formData.dni,
-          license_number: formData.license_number,
-          jurisdiction: formData.jurisdiction,
-          specialty: formData.specialty,
-          cv_url: formData.cv_url,
-          license_image_url: formData.license_image_url,
+          dni: formData.dni || null,
+          license_number: formData.license_number || null,
+          jurisdiction: formData.jurisdiction || null,
+          specialty: formData.specialty || null,
+          cv_url: formData.cv_url || null,
+          license_image_url: formData.license_image_url || null,
           affidavit_accepted: formData.affidavit_accepted,
         } : {
-          cuit: formData.no_cuit ? 'N/A' : formData.cuit,
-          address: formData.address
+          cuit: formData.no_cuit ? 'N/A' : (formData.cuit || null),
+          address: formData.address || null
         })
       };
 
@@ -75,9 +95,9 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
       if (data) {
         onProfileUpdate(data as User);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Error al actualizar el perfil');
+      toast.error(`Error al actualizar el perfil: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }

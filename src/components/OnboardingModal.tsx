@@ -32,18 +32,18 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
     setLoading(true);
 
     try {
-      const updatePayload: Partial<User> = {
-        name: formData.name,
+      const updatePayload: any = {
+        name: formData.name || null,
         verification_status: 'verified', // Auto-verify in Beta Phase for now
       };
 
       if (user.role === 'doctor') {
-        updatePayload.dni = formData.dni;
-        updatePayload.license_number = formData.license_number;
-        updatePayload.jurisdiction = formData.jurisdiction;
-        updatePayload.specialty = formData.specialty;
+        updatePayload.dni = formData.dni || null;
+        updatePayload.license_number = formData.license_number || null;
+        updatePayload.jurisdiction = formData.jurisdiction || null;
+        updatePayload.specialty = formData.specialty || null;
       } else {
-        updatePayload.cuit = formData.no_cuit ? 'N/A' : formData.cuit;
+        updatePayload.cuit = formData.no_cuit ? 'N/A' : (formData.cuit || null);
       }
 
       const { data, error } = await supabase
@@ -57,9 +57,9 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
 
       toast.success('¡Perfil activado! Ya podés acceder a la plataforma.');
       onComplete(data as User);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting data:', error);
-      toast.error('Error al enviar los datos del perfil.');
+      toast.error(`Error al enviar los datos del perfil: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
