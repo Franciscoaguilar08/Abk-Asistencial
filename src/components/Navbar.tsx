@@ -1,6 +1,6 @@
-import { Activity, LogOut, User as UserIcon, ShieldCheck, Bell } from 'lucide-react';
+import { Activity, LogOut, User as UserIcon, ShieldCheck, Bell, MessageSquare } from 'lucide-react';
 import { User, AppNotification } from '../types';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -100,46 +100,59 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
           {currentUser && (
             <div className="flex items-center gap-4">
               
-              <div className="relative">
-                <button 
-                  onClick={() => {
-                    setIsDropdownOpen(!isDropdownOpen);
-                    if (!isDropdownOpen) markAsRead();
-                  }}
-                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative"
-                >
-                  <Bell className="w-5 h-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+              <div className="flex items-center gap-1">
+                <Link 
+                  to="/inbox"
+                  className={cn(
+                    "p-2 rounded-full transition-colors relative",
+                    location.pathname === '/inbox' ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                   )}
-                </button>
-                
-                {isDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setIsDropdownOpen(false)}></div>
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-40 overflow-hidden animate-in slide-in-from-top-2">
-                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                        <h3 className="font-semibold text-gray-900 text-sm">Notificaciones</h3>
-                        {unreadCount > 0 && <span className="text-xs text-blue-600 font-medium">{unreadCount} nuevas</span>}
-                      </div>
-                      <div className="max-h-[300px] overflow-y-auto">
-                        {notifications.length > 0 ? (
-                          notifications.map(notif => (
-                            <div key={notif.id} className={`px-4 py-3 border-b border-gray-50 last:border-0 ${!notif.read ? 'bg-blue-50/50' : 'bg-white'}`}>
-                              <p className="text-xs font-semibold text-gray-900">{notif.title}</p>
-                              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{notif.message}</p>
-                              <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.created_at).toLocaleDateString()}</p>
+                  title="Mensajes"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                </Link>
+
+                <div className="relative">
+                  <button 
+                    onClick={() => {
+                      setIsDropdownOpen(!isDropdownOpen);
+                      if (!isDropdownOpen) markAsRead();
+                    }}
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                    )}
+                  </button>
+                  
+                  {isDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setIsDropdownOpen(false)}></div>
+                      <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-40 overflow-hidden animate-in slide-in-from-top-2">
+                        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                          <h3 className="font-semibold text-gray-900 text-sm">Notificaciones</h3>
+                          {unreadCount > 0 && <span className="text-xs text-blue-600 font-medium">{unreadCount} nuevas</span>}
+                        </div>
+                        <div className="max-h-[300px] overflow-y-auto">
+                          {notifications.length > 0 ? (
+                            notifications.map(notif => (
+                              <div key={notif.id} className={`px-4 py-3 border-b border-gray-50 last:border-0 ${!notif.read ? 'bg-blue-50/50' : 'bg-white'}`}>
+                                <p className="text-xs font-semibold text-gray-900">{notif.title}</p>
+                                <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{notif.message}</p>
+                                <p className="text-[10px] text-gray-400 mt-1">{new Date(notif.created_at).toLocaleDateString()}</p>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-4 py-6 text-center text-sm text-gray-500">
+                              No tienes notificaciones
                             </div>
-                          ))
-                        ) : (
-                          <div className="px-4 py-6 text-center text-sm text-gray-500">
-                            No tienes notificaciones
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-600 border-l border-gray-200 pl-4">

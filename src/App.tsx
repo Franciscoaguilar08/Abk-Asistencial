@@ -14,6 +14,7 @@ import DoctorDashboard from './pages/DoctorDashboard';
 import ClinicDashboard from './pages/ClinicDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Feed from './pages/Feed';
+import Inbox from './pages/Inbox';
 import Navbar from './components/Navbar';
 import OnboardingModal from './components/OnboardingModal';
 import { MessageSquarePlus } from 'lucide-react';
@@ -146,6 +147,16 @@ export default function App() {
               element={
                 currentUser ? (
                   <Profile user={currentUser} onProfileUpdate={(u) => setCurrentUser(u)} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/inbox" 
+              element={
+                currentUser ? (
+                  <Inbox user={currentUser} />
                 ) : (
                   <Navigate to="/" replace />
                 )
