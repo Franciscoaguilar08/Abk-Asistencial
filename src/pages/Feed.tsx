@@ -263,41 +263,28 @@ export default function Feed({ user }: FeedProps) {
             
             return (
               <div key={clinicId} className="group animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100 transition-transform group-hover:rotate-3">
-                      <Building2 className="w-7 h-7 text-white" />
+                <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100 shadow-sm transition-transform group-hover:scale-105">
+                      <Building2 className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-gray-900 leading-tight">{clinicName}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-sm text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-md">
-                          {groupShifts.length} {groupShifts.length === 1 ? 'Oportunidad' : 'Oportunidades'}
-                        </span>
-                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                        <span className="text-sm text-gray-400 font-medium italic">Red ABK Verificada</span>
-                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 leading-tight">{clinicName}</h3>
+                      <p className="text-xs text-gray-500 font-medium">
+                        {groupShifts.length} {groupShifts.length === 1 ? 'oportunidad disponible' : 'oportunidades disponibles'}
+                      </p>
                     </div>
                   </div>
-                  {isMultiple && (
-                    <div className="hidden sm:block">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b-2 border-gray-100 pb-1">Multioferta Institucional</span>
-                    </div>
-                  )}
                 </div>
 
                 <div className={cn(
-                  "grid gap-4 sm:gap-6",
+                  "grid gap-4",
                   isMultiple 
-                    ? "grid-cols-1" // One behind another as requested
+                    ? "grid-cols-1" 
                     : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
                 )}>
-                  {groupShifts.map((shift, idx) => (
-                    <div key={shift.id} className={cn(
-                      "transition-all duration-300 relative",
-                      isMultiple ? "hover:translate-x-1" : "hover:-translate-y-1",
-                      isMultiple && idx < groupShifts.length - 1 ? "after:content-[''] after:absolute after:-bottom-4 after:left-1/2 after:-translate-x-1/2 after:w-px after:h-4 after:bg-blue-100 hidden md:after:block" : ""
-                    )}>
+                  {groupShifts.map((shift) => (
+                    <div key={shift.id} className="transition-all duration-300">
                       <ShiftCard 
                         shift={shift} 
                         userId={user.id}
