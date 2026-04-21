@@ -57,13 +57,29 @@ export default function App() {
       
       // PGRST116 means no rows returned (user doesn't exist in public.users yet)
       if (error && error.code === 'PGRST116') {
-        // User exists in Auth but not in public.users
-        // Landing page will handle showing the role selection if session exists but profile is missing
         setCurrentUser(null);
       } else if (error) {
         throw error;
       } else if (data) {
-        setCurrentUser(data as User);
+        const profile = data as User;
+        
+        // Sync avatar with Google if not set
+        const googleAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture;
+        if (googleAvatar && !profile.avatar) {
+          const { data: updatedProfile } = await supabase
+            .from('users')
+            .update({ avatar: googleAvatar })
+            .eq('id', userId)
+            .select()
+            .single();
+          
+          if (updatedProfile) {
+            setCurrentUser(updatedProfile as User);
+            return;
+          }
+        }
+        
+        setCurrentUser(profile);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);

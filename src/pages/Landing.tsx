@@ -115,6 +115,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             id: authUser.id,
             name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'Usuario',
             email: authUser.email,
+            avatar: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || null,
             role: metadataRole,
             verification_status: 'unverified'
           };
@@ -266,6 +267,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         id: sessionUser.id,
         name: sessionUser.user_metadata?.full_name || sessionUser.user_metadata?.name || 'Usuario',
         email: sessionUser.email,
+        avatar: sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture || null,
         role: selectedRole,
         verification_status: 'unverified' // Force onboarding completion
       };

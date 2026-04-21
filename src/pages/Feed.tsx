@@ -54,14 +54,18 @@ function ClinicGroup({
           isExpanded ? "bg-blue-600 text-white" : "bg-gray-50/50 hover:bg-gray-50"
         )}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 text-left">
           <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border",
+            "w-12 h-12 rounded-xl flex items-center justify-center shadow-sm border overflow-hidden shrink-0",
             isExpanded ? "bg-white/20 border-white/20" : "bg-white border-gray-100"
           )}>
-            <Building2 className={cn("w-5 h-5", isExpanded ? "text-white" : "text-blue-600")} />
+            {firstShift.clinic_avatar ? (
+              <img src={firstShift.clinic_avatar} alt={clinicName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <Building2 className={cn("w-6 h-6", isExpanded ? "text-white" : "text-blue-600")} />
+            )}
           </div>
-          <div className="text-left">
+          <div>
             <h3 className={cn("font-bold leading-tight", isExpanded ? "text-white" : "text-gray-900")}>{clinicName}</h3>
             <p className={cn("text-xs font-medium", isExpanded ? "text-blue-100" : "text-gray-500")}>
               {shifts.length} publicaciones activas

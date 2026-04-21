@@ -4,7 +4,26 @@
 -- 1. Tabla: users
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- Permite lectura pública de perfiles (necesaria para ver datos de clínicas y médicos)
+-- Asegurar que las columnas existan en users
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS linkedin_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dni TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS license_number TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS license_image_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS jurisdiction TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS affidavit_accepted BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cuit TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS availability TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_type TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS zone TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS needed_specialties TEXT[];
+ALTER TABLE users ADD COLUMN IF NOT EXISTS contact_hours TEXT;
+
+-- Permite lectura pública de perfiles
 CREATE POLICY "Public profiles are viewable by authenticated users" 
 ON users FOR SELECT 
 TO authenticated 

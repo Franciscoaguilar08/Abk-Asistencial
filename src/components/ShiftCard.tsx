@@ -160,7 +160,12 @@ export default function ShiftCard({
                 </span>
               )}
             </div>
-            <button onClick={onViewProfile} className="text-left group mb-1 block">
+            <button onClick={onViewProfile} className="text-left group mb-1 flex items-center gap-3">
+              {shift.clinic_avatar && (
+                <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 shadow-sm shrink-0">
+                  <img src={shift.clinic_avatar} alt={shift.clinic_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                </div>
+              )}
               <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors leading-tight flex items-center gap-2">
                 {shift.clinic_name}
                 <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />

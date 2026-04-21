@@ -25,6 +25,10 @@ export interface User {
   // Clinic specific
   address?: string;
   availability?: string; // Disponibilidad horaria/días
+  institution_type?: 'clinica_privada' | 'geriatrico' | 'sanatorio' | 'centro_medico' | 'medicina_laboral' | 'organizador_eventos' | 'otro';
+  zone?: string;
+  needed_specialties?: string[];
+  contact_hours?: string;
   cv_url?: string; // URL del PDF en Supabase Storage
   created_at?: string;
 }
@@ -35,6 +39,7 @@ export interface Shift {
   id: string;
   clinic_id: string;
   clinic_name: string;
+  clinic_avatar?: string;
   category: 'guardia' | 'evento' | 'empleo' | 'suplencia';
   job_duration?: 'tiempo_completo' | 'semanal' | 'mensual' | '3_meses' | 'otro';
   type: string; // e.g., 'Guardia 24hs', 'Cobertura de Torneo'

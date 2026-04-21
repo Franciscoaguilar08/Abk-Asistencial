@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
-import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert, Calendar, Upload, FileUp, ExternalLink, Trash2, ShieldCheck, Image as ImageIcon, ChevronLeft } from 'lucide-react';
+import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert, Calendar, Upload, FileUp, ExternalLink, Trash2, ShieldCheck, Image as ImageIcon, ChevronLeft, MapPin, Stethoscope, Clock, Plus, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -10,6 +10,25 @@ interface ProfileProps {
   user: User;
   onProfileUpdate: (user: User) => void;
 }
+
+const ZONES = [
+  'Palermo, CABA', 'Belgrano, CABA', 'Recoleta, CABA', 'Caballito, CABA', 'Almagro, CABA', 
+  'Villa Urquiza, CABA', 'Villa Devoto, CABA', 'Flores, CABA', 'San Telmo, CABA', 'Puerto Madero, CABA',
+  'Villa Crespo, CABA', 'Colegiales, CABA', 'Chacarita, CABA', 'Retiro, CABA', 'Barracas, CABA',
+  'Paternal, CABA', 'Saavedra, CABA', 'Núñez, CABA', 'Saavedra, CABA',
+  'GBA Norte - San Isidro', 'GBA Norte - Vicente López', 'GBA Norte - Olivos', 'GBA Norte - Martínez', 'GBA Norte - Tigre', 'GBA Norte - Pilar',
+  'GBA Sur - Avellaneda', 'GBA Sur - Quilmes', 'GBA Sur - Lomas de Zamora', 'GBA Sur - Lanús', 'GBA Sur - Adrogué',
+  'GBA Oeste - Ramos Mejía', 'GBA Oeste - Haedo', 'GBA Oeste - Morón', 'GBA Oeste - Castelar', 'GBA Oeste - San Justo'
+];
+
+const SPECIALTIES = [
+  'Pediatría', 'Clínica Médica', 'Terapia Intensiva', 'Deportología', 'Ginecología', 
+  'Obstetricia', 'Traumatología', 'Cardiología', 'Dermatología', 'Psiquiatría', 
+  'Neurología', 'Oftalmología', 'Otorrinolaringología', 'Urología', 'Gastroenterología', 
+  'Endocrinología', 'Reumatología', 'Infectología', 'Hematología', 'Oncología', 
+  'Nefrología', 'Neumonología', 'Cirugía General', 'Anestesiología', 'Medicina General', 
+  'Emergentología', 'Diagnóstico por Imágenes', 'Kinesiología', 'Nutrición'
+];
 
 export default function Profile({ user, onProfileUpdate }: ProfileProps) {
   const [loading, setLoading] = useState(false);
@@ -31,7 +50,12 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     // Clinic
     cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
     no_cuit: user.cuit === 'N/A',
-    address: user.address || ''
+    address: user.address || '',
+    institution_type: user.institution_type || '',
+    zone: user.zone || '',
+    needed_specialties: user.needed_specialties || [] as string[],
+    contact_hours: user.contact_hours || '',
+    avatar: user.avatar || ''
   });
 
   // Keep formData in sync if user prop changes
@@ -51,7 +75,12 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
       affidavit_accepted: user.affidavit_accepted || false,
       cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
       no_cuit: user.cuit === 'N/A',
-      address: user.address || ''
+      address: user.address || '',
+      institution_type: user.institution_type || '',
+      zone: user.zone || '',
+      needed_specialties: user.needed_specialties || [],
+      contact_hours: user.contact_hours || '',
+      avatar: user.avatar || ''
     });
   }, [user]);
 
@@ -82,7 +111,12 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
           affidavit_accepted: formData.affidavit_accepted,
         } : {
           cuit: formData.no_cuit ? 'N/A' : (formData.cuit || null),
-          address: formData.address || null
+          address: formData.address || null,
+          institution_type: formData.institution_type || null,
+          zone: formData.zone || null,
+          needed_specialties: formData.needed_specialties || [],
+          contact_hours: formData.contact_hours || null,
+          avatar: formData.avatar || null
         })
       };
 
@@ -188,6 +222,56 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten imágenes (JPG, PNG)');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit for logo
+      toast.error('La imagen es demasiado grande (máx 2MB)');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-logo-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('cvs') // Using common bucket for simplicity
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('cvs')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, avatar: publicUrl }));
+      toast.success('Logo cargado correctamente.');
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Error al subir el logo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSpecialty = (specialty: string) => {
+    setFormData(prev => {
+      const current = prev.needed_specialties || [];
+      const next = current.includes(specialty)
+        ? current.filter(s => s !== specialty)
+        : [...current, specialty];
+      return { ...prev, needed_specialties: next };
+    });
   };
 
   return (
@@ -449,46 +533,168 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-sm font-medium text-gray-700">CUIT</label>
-                    <label className="flex items-center gap-1.5 text-xs text-blue-600 font-medium cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        name="no_cuit" 
-                        checked={formData.no_cuit} 
-                        onChange={handleChange} 
-                        className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      No aplica
-                    </label>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Logo Section */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Logo o Imagen de la Institución</label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 h-24 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden relative group">
+                        {formData.avatar ? (
+                          <img src={formData.avatar} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <ImageIcon className="w-8 h-8 text-gray-300" />
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-bold text-gray-900">Haz clic para subir</p>
+                        <p className="text-gray-500">JPG, PNG (máx 2MB)</p>
+                        {formData.avatar && (
+                          <button 
+                            type="button" 
+                            onClick={() => setFormData(prev => ({ ...prev, avatar: '' }))}
+                            className="text-red-500 font-bold hover:underline mt-1"
+                          >
+                            Eliminar logo
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <input 
-                    type="text" 
-                    name="cuit" 
-                    value={formData.no_cuit ? '' : formData.cuit} 
-                    onChange={handleChange}
-                    disabled={formData.no_cuit}
-                    placeholder={formData.no_cuit ? "No aplica verificación por CUIT" : "Ej: 30112233445"}
-                    className={cn(
-                      "w-full px-3 py-2 border rounded-md outline-none transition-all",
-                      formData.no_cuit 
-                        ? "bg-gray-100 text-gray-400 border-gray-200" 
-                        : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-                    )} 
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección / Link Google Maps</label>
-                  <input 
-                    type="text" 
-                    name="address" 
-                    value={formData.address} 
-                    onChange={handleChange}
-                    placeholder="Ej: Av. Rivadavia 123, CABA (o enlace a Maps)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
-                  />
+
+                  {/* Institution Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                      <Building2 className="w-3.5 h-3.5 text-gray-400" /> Tipo de Institución
+                    </label>
+                    <select 
+                      name="institution_type"
+                      value={formData.institution_type}
+                      onChange={(e) => setFormData(prev => ({ ...prev, institution_type: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Seleccionar tipo...</option>
+                      <option value="clinica_privada">Clínica privada</option>
+                      <option value="geriatrico">Geriátrico</option>
+                      <option value="sanatorio">Sanatorio</option>
+                      <option value="centro_medico">Centro médico</option>
+                      <option value="medicina_laboral">Empresa de medicina laboral</option>
+                      <option value="organizador_eventos">Organizador de eventos</option>
+                      <option value="otro">Otro</option>
+                    </select>
+                  </div>
+
+                  {/* CUIT */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-sm font-medium text-gray-700">CUIT</label>
+                      <label className="flex items-center gap-1.5 text-xs text-blue-600 font-medium cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          name="no_cuit" 
+                          checked={formData.no_cuit} 
+                          onChange={handleChange} 
+                          className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        No aplica
+                      </label>
+                    </div>
+                    <input 
+                      type="text" 
+                      name="cuit" 
+                      value={formData.no_cuit ? '' : formData.cuit} 
+                      onChange={handleChange}
+                      disabled={formData.no_cuit}
+                      placeholder={formData.no_cuit ? "No aplica verificación por CUIT" : "Ej: 30112233445"}
+                      className={cn(
+                        "w-full px-3 py-2 border rounded-md outline-none transition-all",
+                        formData.no_cuit 
+                          ? "bg-gray-100 text-gray-400 border-gray-200" 
+                          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                      )} 
+                    />
+                  </div>
+
+                  {/* Zone */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400" /> Zona / Barrio Principales
+                    </label>
+                    <select 
+                      name="zone"
+                      value={formData.zone}
+                      onChange={handleChange as any}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Seleccionar zona...</option>
+                      {ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                    </select>
+                  </div>
+
+                  {/* Contact Hours */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-gray-400" /> Horario de contacto administrativo
+                    </label>
+                    <input 
+                      type="text" 
+                      name="contact_hours" 
+                      value={formData.contact_hours} 
+                      onChange={handleChange}
+                      placeholder="Ej: Lunes a viernes 9 a 18hs"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dirección / Link Google Maps</label>
+                    <input 
+                      type="text" 
+                      name="address" 
+                      value={formData.address} 
+                      onChange={handleChange}
+                      placeholder="Ej: Av. Rivadavia 123, CABA (o enlace a Maps)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                    />
+                  </div>
+
+                  {/* Specialties Needed (Multiple Select) */}
+                  <div className="md:col-span-2 space-y-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                      <Stethoscope className="w-3.5 h-3.5 text-gray-400" /> Especialidades que más necesitan (Selección múltiple)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {SPECIALTIES.map(spec => {
+                        const isSelected = formData.needed_specialties.includes(spec);
+                        return (
+                          <button
+                            key={spec}
+                            type="button"
+                            onClick={() => toggleSpecialty(spec)}
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 border",
+                              isSelected 
+                                ? "bg-blue-600 border-blue-600 text-white shadow-sm" 
+                                : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600"
+                            )}
+                          >
+                            {spec}
+                            {isSelected ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

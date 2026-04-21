@@ -115,6 +115,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     const newShift = {
       clinic_id: user.id,
       clinic_name: user.name,
+      clinic_avatar: user.avatar,
       category: formData.get('category') as 'guardia' | 'evento' | 'empleo' | 'suplencia',
       job_duration: formData.get('job_duration') as any || null,
       specialty: formData.get('specialty') as string,
