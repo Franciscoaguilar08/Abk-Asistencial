@@ -3,6 +3,7 @@ import { User, AppNotification } from '../types';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { cn } from '../lib/utils';
 
 interface NavbarProps {
   currentUser: User | null;

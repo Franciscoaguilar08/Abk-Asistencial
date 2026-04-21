@@ -1,4 +1,4 @@
-import { Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, Check } from 'lucide-react';
+import { Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, Check, XCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
