@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import ViewProfileModal from '../components/ViewProfileModal';
 import ShiftCard from '../components/ShiftCard';
 import { 
   Globe, Filter, Search, Building2, BriefcaseMedical, 
-  LayoutDashboard, TrendingUp, Sparkles, XCircle, DollarSign
+  LayoutDashboard, TrendingUp, XCircle, DollarSign,
+  ChevronDown, ChevronUp, MapPin, Calendar, Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -13,6 +16,120 @@ import ChatModal from '../components/ChatModal';
 
 interface FeedProps {
   user: User;
+}
+
+// Sub-component for Grouped Clinic Cards
+function ClinicGroup({ 
+  clinicName, 
+  shifts, 
+  user,
+  onApply,
+  onConfirmApplication,
+  onNegotiate,
+  onRefresh,
+  onViewProfile 
+}: { 
+  clinicName: string, 
+  shifts: Shift[], 
+  user: User,
+  onApply: (id: string) => void,
+  onConfirmApplication: (id: string) => void,
+  onNegotiate: (id: string, price: number) => void,
+  onRefresh: () => void,
+  onViewProfile: (id: string) => void
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const firstShift = shifts[0];
+
+  return (
+    <div className={cn(
+      "bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col transition-all duration-500 h-fit",
+      isExpanded ? "col-span-full shadow-xl shadow-blue-100/20 ring-4 ring-blue-50/50" : ""
+    )}>
+      {/* Header */}
+      <button 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={cn(
+          "w-full p-5 flex items-center justify-between transition-colors border-b border-gray-100",
+          isExpanded ? "bg-blue-600 text-white" : "bg-gray-50/50 hover:bg-gray-50"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm border",
+            isExpanded ? "bg-white/20 border-white/20" : "bg-white border-gray-100"
+          )}>
+            <Building2 className={cn("w-5 h-5", isExpanded ? "text-white" : "text-blue-600")} />
+          </div>
+          <div className="text-left">
+            <h3 className={cn("font-bold leading-tight", isExpanded ? "text-white" : "text-gray-900")}>{clinicName}</h3>
+            <p className={cn("text-xs font-medium", isExpanded ? "text-blue-100" : "text-gray-500")}>
+              {shifts.length} publicaciones activas
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            "text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider shadow-sm",
+            isExpanded ? "bg-white text-blue-600" : "bg-blue-600 text-white shadow-blue-200"
+          )}>
+            {isExpanded ? 'Cerrar' : 'Ver Galería'}
+          </span>
+          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </div>
+      </button>
+
+      {/* Expanded Gallery of Full Cards */}
+      {isExpanded && (
+        <div className="p-6 bg-gray-50/30 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {shifts.map((shift) => (
+              <div key={shift.id} className="h-full">
+                <ShiftCard 
+                  shift={shift} 
+                  userId={user.id}
+                  userRole={user.role as 'doctor' | 'clinic'}
+                  userVerificationStatus={user.verification_status}
+                  isMyShift={shift.applicants.includes(user.id)}
+                  clinicTotalCount={1}
+                  onApply={() => onApply(shift.id)} 
+                  onConfirmApplication={() => onConfirmApplication(shift.id)}
+                  onNegotiate={() => onNegotiate(shift.id, shift.price)}
+                  onRefresh={onRefresh} 
+                  onViewProfile={() => onViewProfile(shift.clinic_id)}
+                />
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-8 flex justify-center">
+            <button 
+              onClick={() => setIsExpanded(false)}
+              className="px-8 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all shadow-sm hover:shadow-md"
+            >
+              Cerrar lista de {clinicName}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Collapsed Preview */}
+      {!isExpanded && (
+        <div className="p-4 bg-white">
+          <div className="flex items-center justify-between text-xs text-gray-500 px-3 py-2.5 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => setIsExpanded(true)}>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="font-medium">Próxima: {format(new Date(firstShift.date), 'EEE d MMM', { locale: es })} • {firstShift.specialty}</span>
+            </div>
+            <div className="flex items-center gap-1 text-blue-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+              <span>+ información</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Feed({ user }: FeedProps) {
@@ -168,12 +285,28 @@ export default function Feed({ user }: FeedProps) {
     const matchesCategory = selectedCategory === 'Todas' || s.category === selectedCategory;
     const matchesSpecialty = selectedSpecialty === 'Todas' || s.specialty === selectedSpecialty;
     
-    // Professionals don't see shifts they already applied to in the "feed" to avoid clutter?
-    // User requested "un lugar común", usually as a professional you want to see what's new.
-    // If I already applied, I might still want to see it but marked. 
-    // For now let's keep it simple: show all open shifts.
     return matchesSearch && matchesZone && matchesCategory && matchesSpecialty;
   });
+
+  // Calculate counts per clinic for a subtle indicator
+  const clinicCounts = filteredShifts.reduce((acc, shift) => {
+    const name = shift.clinic_name;
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Sort by clinic name to keep related offers together in the grid
+  const sortedShifts = [...filteredShifts].sort((a, b) => a.clinic_name.localeCompare(b.clinic_name));
+
+  // Group by clinic for Option A
+  const groupedByClinic = sortedShifts.reduce((acc, shift) => {
+    const key = shift.clinic_name;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(shift);
+    return acc;
+  }, {} as Record<string, Shift[]>);
+
+  const clinicEntries = Object.entries(groupedByClinic);
 
   const availableZones = ['Todas', ...Array.from(new Set(shifts.map(s => s.zone).filter(Boolean)))];
   const availableSpecialties = ['Todas', ...Array.from(new Set(shifts.map(s => s.specialty)))];
@@ -190,17 +323,13 @@ export default function Feed({ user }: FeedProps) {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
       {/* Feed Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
+      <div className="relative overflow-hidden bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+        <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-600">
           <Globe className="w-48 h-48" />
         </div>
         <div className="relative z-10 space-y-2">
-          <div className="flex items-center gap-2 text-blue-100 font-bold mb-2 uppercase tracking-widest text-xs">
-            <Sparkles className="w-4 h-4" />
-            Red ABK en Tiempo Real
-          </div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight">Oportunidades de la Red</h1>
-          <p className="text-blue-100 max-w-xl text-lg font-medium opacity-90 leading-relaxed">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-gray-900">Oportunidades de la Red</h1>
+          <p className="text-gray-500 max-w-xl text-lg font-medium leading-relaxed">
             Descubrí y conectá con instituciones líderes. Todas las ofertas de la comunidad en un solo lugar.
           </p>
         </div>
@@ -247,64 +376,52 @@ export default function Feed({ user }: FeedProps) {
         </div>
       </div>
 
-      {/* Grouped Feed Content */}
-      {filteredShifts.length > 0 ? (
-        <div className="space-y-12 pb-12">
-          {Object.entries(
-            filteredShifts.reduce((acc, shift) => {
-              const clinicId = shift.clinic_id || 'unknown';
-              if (!acc[clinicId]) acc[clinicId] = [];
-              acc[clinicId].push(shift);
-              return acc;
-            }, {} as Record<string, Shift[]>)
-          ).map(([clinicId, groupShifts]) => {
-            const clinicName = groupShifts[0].clinic_name || 'Institución';
-            const isMultiple = groupShifts.length > 1;
-            
-            return (
-              <div key={clinicId} className="group animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-4 border-b border-gray-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100 shadow-sm transition-transform group-hover:scale-105">
-                      <Building2 className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 leading-tight">{clinicName}</h3>
-                      <p className="text-xs text-gray-500 font-medium">
-                        {groupShifts.length} {groupShifts.length === 1 ? 'oportunidad disponible' : 'oportunidades disponibles'}
-                      </p>
-                    </div>
-                  </div>
+      {/* Feed Content - Grouped/Flat Hybrid Grid */}
+      {clinicEntries.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12 items-start">
+          {clinicEntries.map(([clinicName, clinicShifts]) => {
+            // Case 1: More than 3 shifts -> Use the Grouped Card (as requested)
+            if (clinicShifts.length > 3) {
+              return (
+                <div key={clinicName} className="animate-in fade-in slide-in-from-bottom-4 duration-300 col-span-1 md:col-span-1 lg:col-span-1 has-[.col-span-full]:col-span-full transition-all">
+                  <ClinicGroup 
+                    clinicName={clinicName}
+                    shifts={clinicShifts}
+                    user={user}
+                    onApply={handleApply}
+                    onConfirmApplication={handleConfirmApplication}
+                    onNegotiate={(id, price) => {
+                      setNegotiatingShiftId(id);
+                      setProposedPrice(price.toString());
+                    }}
+                    onRefresh={fetchShifts}
+                    onViewProfile={fetchProfileData}
+                  />
                 </div>
+              );
+            }
 
-                <div className={cn(
-                  "grid gap-4",
-                  isMultiple 
-                    ? "grid-cols-1" 
-                    : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-                )}>
-                  {groupShifts.map((shift) => (
-                    <div key={shift.id} className="transition-all duration-300">
-                      <ShiftCard 
-                        shift={shift} 
-                        userId={user.id}
-                        userRole={user.role as 'doctor' | 'clinic'}
-                        userVerificationStatus={user.verification_status}
-                        isMyShift={shift.applicants.includes(user.id)}
-                        onApply={() => handleApply(shift.id)} 
-                        onConfirmApplication={() => handleConfirmApplication(shift.id)}
-                        onNegotiate={() => {
-                          setNegotiatingShiftId(shift.id);
-                          setProposedPrice(shift.price.toString());
-                        }}
-                        onRefresh={fetchShifts} 
-                        onViewProfile={() => fetchProfileData(shift.clinic_id)}
-                      />
-                    </div>
-                  ))}
-                </div>
+            // Case 2: 3 or fewer shifts -> Show them as individual ShiftCards in the main grid
+            return clinicShifts.map(shift => (
+              <div key={shift.id} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <ShiftCard 
+                  shift={shift} 
+                  userId={user.id}
+                  userRole={user.role as 'doctor' | 'clinic'}
+                  userVerificationStatus={user.verification_status}
+                  isMyShift={shift.applicants.includes(user.id)}
+                  clinicTotalCount={clinicShifts.length}
+                  onApply={() => handleApply(shift.id)} 
+                  onConfirmApplication={() => handleConfirmApplication(shift.id)}
+                  onNegotiate={() => {
+                    setNegotiatingShiftId(shift.id);
+                    setProposedPrice(shift.price.toString());
+                  }}
+                  onRefresh={fetchShifts} 
+                  onViewProfile={() => fetchProfileData(shift.clinic_id)}
+                />
               </div>
-            );
+            ));
           })}
         </div>
       ) : (

@@ -5,7 +5,7 @@ import { format, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, 
-  UserCircle, ExternalLink, Star, MessageSquare, XCircle, BriefcaseMedical 
+  UserCircle, ExternalLink, Star, MessageSquare, XCircle, BriefcaseMedical
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -24,6 +24,7 @@ interface ShiftCardProps {
   userRole?: 'doctor' | 'clinic';
   userVerificationStatus?: string;
   onDelete?: () => void;
+  clinicTotalCount?: number;
 }
 
 export default function ShiftCard({ 
@@ -39,7 +40,8 @@ export default function ShiftCard({
   isMyShift, 
   userId, 
   userRole = 'doctor',
-  userVerificationStatus 
+  userVerificationStatus,
+  clinicTotalCount = 0
 }: ShiftCardProps) {
   const isVerified = userVerificationStatus === 'verified';
   const isAssigned = shift.assigned_doctor_id === userId;
@@ -118,7 +120,22 @@ export default function ShiftCard({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full">
+    <div className="relative group/stack h-full">
+      {/* Decorative stack layers for multi-offer clinics */}
+      {clinicTotalCount > 1 && (
+        <>
+          <div className="absolute inset-0 bg-gray-50 border border-gray-100 rounded-xl translate-x-1.5 translate-y-1.5 -z-10 group-hover/stack:translate-x-2 group-hover/stack:translate-y-2 transition-transform duration-300" />
+          <div className="absolute inset-0 bg-white border border-gray-100 rounded-xl translate-x-0.5 translate-y-0.5 -z-20 group-hover/stack:translate-x-1 group-hover/stack:translate-y-1 transition-transform duration-300 shadow-sm" />
+        </>
+      )}
+      
+      <div className={cn(
+        "bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col h-full group/card",
+        shift.category === 'evento' ? "hover:border-purple-300 hover:shadow-purple-50" : 
+        shift.category === 'empleo' ? "hover:border-green-300 hover:shadow-green-50" :
+        shift.category === 'suplencia' ? "hover:border-orange-300 hover:shadow-orange-50" :
+        "hover:border-blue-300 hover:shadow-blue-50"
+      )}>
       <div className="p-5 flex-1 space-y-4">
         <div className="flex justify-between items-start">
           <div>
@@ -144,7 +161,7 @@ export default function ShiftCard({
               )}
             </div>
             <button onClick={onViewProfile} className="text-left group mb-1 block">
-              <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors leading-tight flex items-center gap-1">
+              <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors leading-tight flex items-center gap-2">
                 {shift.clinic_name}
                 <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </h3>
@@ -466,5 +483,6 @@ export default function ShiftCard({
         </div>
       )}
     </div>
+  </div>
   );
 }
