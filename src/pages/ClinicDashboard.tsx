@@ -170,9 +170,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       } catch (err) {
         console.error("Non-blocking error sending notifications:", err);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating shift:", error);
-      toast.error("Error al publicar la oportunidad.");
+      toast.error(`Error al publicar la oportunidad: ${error.message || 'Error desconocido'}`);
     }
   };
 
