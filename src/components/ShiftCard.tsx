@@ -5,7 +5,7 @@ import { format, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, 
-  UserCircle, ExternalLink, Star, MessageSquare, XCircle 
+  UserCircle, ExternalLink, Star, MessageSquare, XCircle, BriefcaseMedical 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -238,109 +238,88 @@ export default function ShiftCard({
 
       <div className="p-4 bg-gray-50 border-t border-gray-200 mt-auto">
         {userRole === 'doctor' ? (
-          !isMyShift ? (
-            <div className="space-y-2">
-              {!isVerified && (
-                <p className="text-[11px] text-blue-600 font-medium text-center mb-1">Certificación pendiente para postularte</p>
-              )}
-              {shift.is_negotiable && onNegotiate ? (
-                <button 
-                  onClick={onNegotiate}
-                  disabled={!isVerified}
-                  className={cn(
-                    "w-full py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
-                    isVerified 
-                      ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  )}
-                >
-                  {!isVerified && <Clock className="w-4 h-4" />}
-                  Postular y Ofrecer Precio
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col items-center justify-center gap-1 text-sm font-medium w-full">
+              {shift.status === 'noshow' ? (
+                <div className="bg-red-50 text-red-700 p-3 rounded-lg border border-red-200 text-center w-full">
+                  <p className="font-bold">Inasistencia registrada</p>
+                  <p className="text-xs font-normal opacity-80 mt-1">
+                    Esta guardia se marcó como inasistencia. Esto afecta tu porcentaje de cumplimiento.
+                  </p>
+                </div>
+              ) : shift.status === 'cancelled_by_clinic' ? (
+                <div className="bg-orange-50 text-orange-700 p-3 rounded-lg border border-orange-200 text-center w-full">
+                  <p className="font-bold">Cancelada por la institución</p>
+                  <p className="text-xs font-normal opacity-80 mt-1">
+                    La clínica canceló esta guardia después de confirmarte.
+                  </p>
+                </div>
+              ) : isAssigned ? (
+                <span className="text-green-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Asignada a ti
+                </span>
+              ) : isConfirmedApplication ? (
+                <div className="bg-blue-50 text-blue-700 p-3 rounded-lg border border-blue-100 text-center w-full">
+                   <div className="flex items-center justify-center gap-2 mb-1">
+                     <CheckCircle2 className="w-4 h-4" />
+                     <span className="font-bold">Postulado</span>
+                   </div>
+                   <p className="text-xs font-normal opacity-80">
+                     Tu postulación está confirmada y está siendo revisada por la institución.
+                   </p>
+                </div>
               ) : (
-                <button 
-                  onClick={onApply}
-                  disabled={!isVerified}
-                  className={cn(
-                    "w-full py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
-                    isVerified 
-                      ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                <div className="w-full space-y-2">
+                  {!isMyShift ? (
+                    /* Initial postulation button in Feed */
+                    <button 
+                      onClick={onApply}
+                      disabled={!isVerified}
+                      className={cn(
+                        "w-full py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm",
+                        isVerified 
+                          ? "bg-blue-600 hover:bg-blue-700 text-white active:scale-[0.98]" 
+                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      )}
+                    >
+                      <BriefcaseMedical className="w-4 h-4" />
+                      Postular
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    /* Confirmation button in Dashboard */
+                    <button 
+                      onClick={onConfirmApplication}
+                      className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 active:scale-[0.98] text-white rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      Confirmar Postulación
+                    </button>
                   )}
-                >
-                  {!isVerified && <Clock className="w-4 h-4" />}
-                  Aplicar a Oportunidad
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col items-center justify-center gap-1 text-sm font-medium w-full">
-                {shift.status === 'noshow' ? (
-                  <div className="bg-red-50 text-red-700 p-3 rounded-lg border border-red-200 text-center w-full">
-                    <p className="font-bold">Inasistencia registrada</p>
-                    <p className="text-xs font-normal opacity-80 mt-1">
-                      Esta guardia se marcó como inasistencia. Esto afecta tu porcentaje de cumplimiento.
-                    </p>
-                  </div>
-                ) : shift.status === 'cancelled_by_clinic' ? (
-                  <div className="bg-orange-50 text-orange-700 p-3 rounded-lg border border-orange-200 text-center w-full">
-                    <p className="font-bold">Cancelada por la institución</p>
-                    <p className="text-xs font-normal opacity-80 mt-1">
-                      La clínica canceló esta guardia después de confirmarte.
-                    </p>
-                  </div>
-                ) : isAssigned ? (
-                  <span className="text-green-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Asignada a ti
-                  </span>
-                ) : (
-                  <div className="bg-yellow-50 text-yellow-800 p-3 rounded-lg border border-yellow-200 text-center w-full">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{isConfirmedApplication ? 'Postulación Confirmada' : 'Interés Expresado'}</span>
-                    </div>
-                    <p className="text-xs font-normal opacity-80 mt-1">
-                      {isConfirmedApplication 
-                        ? 'La institución revisará tu perfil confirmado. Si eres el candidato elegido, se habilitará el contacto.' 
-                        : 'Aún no has confirmado tu postulación. Debes confirmarla para que la institución te considere seriamente.'}
-                    </p>
-                    
-                    {!isConfirmedApplication && onConfirmApplication && (
-                      <button 
-                        onClick={onConfirmApplication}
-                        className="mt-3 w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        Confirmar Postulación
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {isPending && onWithdraw && (
-                <div className="mt-2 w-full">
-                  {!canWithdraw && (
-                    <p className="text-[10px] text-red-500 text-center mb-1 font-medium">No puedes retirar tu postulación faltando menos de 24hs</p>
-                  )}
-                  <button 
-                    onClick={() => setIsWithdrawModalOpen(true)}
-                    disabled={!canWithdraw}
-                    className={cn(
-                      "w-full py-2 bg-white border rounded-lg text-sm font-medium transition-colors",
-                      canWithdraw 
-                        ? "border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
-                        : "border-gray-200 text-gray-400 cursor-not-allowed"
-                    )}
-                  >
-                    Retirar postulación
-                  </button>
                 </div>
               )}
+            </div>
+
+            {isMyShift && onWithdraw && !isAssigned && shift.status === 'open' && (
+              <div className="mt-1 w-full">
+                {!canWithdraw && (
+                  <p className="text-[10px] text-red-500 text-center mb-1 font-medium italic">No puedes retirar tu postulación faltando menos de 24hs</p>
+                )}
+                <button 
+                  onClick={() => setIsWithdrawModalOpen(true)}
+                  disabled={!canWithdraw}
+                  className={cn(
+                    "w-full py-2 bg-white border rounded-lg text-sm font-medium transition-colors",
+                    canWithdraw 
+                      ? "border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200"
+                      : "border-gray-100 text-gray-400 cursor-not-allowed"
+                  )}
+                >
+                  {canWithdraw ? 'Retirar postulación' : 'Retiro bloqueado'}
+                </button>
+              </div>
+            )}
 
               {isAssigned && (
                 <div className="flex flex-col gap-2 pt-2 border-t border-gray-200">
@@ -409,13 +388,12 @@ export default function ShiftCard({
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          )
+            )}
+          </div>
         ) : (
           /* Clinic Marketplace View - No Apply button, just info */
-          <div className="py-2 text-center">
-            <p className="text-xs font-medium text-gray-500 italic">Vista de referencia institucional</p>
+          <div className="py-2 text-center text-gray-500 italic">
+            <p className="text-xs font-medium">Vista de referencia institucional</p>
           </div>
         )}
       </div>
