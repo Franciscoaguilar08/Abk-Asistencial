@@ -260,13 +260,13 @@ export default function ShiftCard({
                   Asignada a ti
                 </span>
               ) : isConfirmedApplication ? (
-                <div className="bg-blue-50 text-blue-700 p-3 rounded-lg border border-blue-100 text-center w-full">
+                <div className="bg-blue-50 text-blue-700 p-3 rounded-lg border border-blue-100 text-center w-full animate-in fade-in zoom-in-95 duration-300">
                    <div className="flex items-center justify-center gap-2 mb-1">
                      <CheckCircle2 className="w-4 h-4" />
-                     <span className="font-bold">Postulado</span>
+                     <span className="font-bold">Postulación Confirmada</span>
                    </div>
-                   <p className="text-xs font-normal opacity-80">
-                     Tu postulación está confirmada y está siendo revisada por la institución.
+                   <p className="text-[11px] font-medium opacity-80">
+                     Tu perfil ha sido enviado oficialmente y está siendo revisado por la institución.
                    </p>
                 </div>
               ) : (
