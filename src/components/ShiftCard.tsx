@@ -179,8 +179,8 @@ export default function ShiftCard({
 
         <div className="space-y-2 text-sm text-gray-600">
           {shift.description && (
-            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-gray-800 text-sm italic mb-2">
-              "{shift.description}"
+            <div className="bg-blue-50/30 p-3 rounded-lg border border-blue-100 text-gray-900 text-sm mb-2 leading-relaxed">
+              {shift.description}
             </div>
           )}
           <div className="flex items-center gap-2">

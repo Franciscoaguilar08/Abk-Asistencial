@@ -252,44 +252,73 @@ export default function Feed({ user }: FeedProps) {
         <div className="space-y-12 pb-12">
           {Object.entries(
             filteredShifts.reduce((acc, shift) => {
-              const clinicName = shift.clinic_name || 'Institución';
-              if (!acc[clinicName]) acc[clinicName] = [];
-              acc[clinicName].push(shift);
+              const clinicId = shift.clinic_id || 'unknown';
+              if (!acc[clinicId]) acc[clinicId] = [];
+              acc[clinicId].push(shift);
               return acc;
             }, {} as Record<string, Shift[]>)
-          ).map(([clinicName, groupShifts]) => (
-            <div key={clinicName} className="group animate-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center border border-blue-100 shadow-sm transition-transform group-hover:scale-110">
-                  <Building2 className="w-6 h-6 text-blue-600" />
+          ).map(([clinicId, groupShifts]) => {
+            const clinicName = groupShifts[0].clinic_name || 'Institución';
+            const isMultiple = groupShifts.length > 1;
+            
+            return (
+              <div key={clinicId} className="group animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100 transition-transform group-hover:rotate-3">
+                      <Building2 className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-gray-900 leading-tight">{clinicName}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-md">
+                          {groupShifts.length} {groupShifts.length === 1 ? 'Oportunidad' : 'Oportunidades'}
+                        </span>
+                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                        <span className="text-sm text-gray-400 font-medium italic">Red ABK Verificada</span>
+                      </div>
+                    </div>
+                  </div>
+                  {isMultiple && (
+                    <div className="hidden sm:block">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b-2 border-gray-100 pb-1">Multioferta Institucional</span>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <h3 className="text-xl font-black text-gray-900 leading-none">{clinicName}</h3>
-                  <p className="text-sm text-gray-500 mt-1 font-medium">{groupShifts.length} {groupShifts.length === 1 ? 'publicación activa' : 'publicaciones activas'}</p>
+
+                <div className={cn(
+                  "grid gap-4 sm:gap-6",
+                  isMultiple 
+                    ? "grid-cols-1" // One behind another as requested
+                    : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                )}>
+                  {groupShifts.map((shift, idx) => (
+                    <div key={shift.id} className={cn(
+                      "transition-all duration-300 relative",
+                      isMultiple ? "hover:translate-x-1" : "hover:-translate-y-1",
+                      isMultiple && idx < groupShifts.length - 1 ? "after:content-[''] after:absolute after:-bottom-4 after:left-1/2 after:-translate-x-1/2 after:w-px after:h-4 after:bg-blue-100 hidden md:after:block" : ""
+                    )}>
+                      <ShiftCard 
+                        shift={shift} 
+                        userId={user.id}
+                        userRole={user.role as 'doctor' | 'clinic'}
+                        userVerificationStatus={user.verification_status}
+                        isMyShift={shift.applicants.includes(user.id)}
+                        onApply={() => handleApply(shift.id)} 
+                        onConfirmApplication={() => handleConfirmApplication(shift.id)}
+                        onNegotiate={() => {
+                          setNegotiatingShiftId(shift.id);
+                          setProposedPrice(shift.price.toString());
+                        }}
+                        onRefresh={fetchShifts} 
+                        onViewProfile={() => fetchProfileData(shift.clinic_id)}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-                {groupShifts.map(shift => (
-                  <ShiftCard 
-                    key={shift.id} 
-                    shift={shift} 
-                    userId={user.id}
-                    userRole={user.role as 'doctor' | 'clinic'}
-                    userVerificationStatus={user.verification_status}
-                    isMyShift={shift.applicants.includes(user.id)}
-                    onApply={() => handleApply(shift.id)} 
-                    onConfirmApplication={() => handleConfirmApplication(shift.id)}
-                    onNegotiate={() => {
-                      setNegotiatingShiftId(shift.id);
-                      setProposedPrice(shift.price.toString());
-                    }}
-                    onRefresh={fetchShifts} 
-                    onViewProfile={() => fetchProfileData(shift.clinic_id)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-32 bg-white rounded-3xl border-2 border-dashed border-gray-100">

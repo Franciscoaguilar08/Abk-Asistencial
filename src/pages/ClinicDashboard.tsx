@@ -455,7 +455,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
-                  <select name="zone" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select name="zone" defaultValue={user.jurisdiction || 'CABA'} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option>CABA</option>
                     <option>GBA Norte</option>
                     <option>GBA Sur</option>
@@ -466,7 +466,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Dirección exacta</label>
-                  <input type="text" name="location" required placeholder="Ej: Av. Rivadavia 1234" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <input type="text" name="location" defaultValue={user.address} required placeholder="Ej: Av. Rivadavia 1234" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo / Descripción breve</label>
@@ -674,8 +674,8 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
         </div>
         
         {shift.description && (
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-gray-800 text-sm italic">
-            "{shift.description}"
+          <div className="bg-blue-50/30 p-3 rounded-lg border border-blue-100 text-gray-900 text-sm leading-relaxed">
+            {shift.description}
           </div>
         )}
 
