@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../lib/utils';
 
 interface LandingProps {
   onLoginSuccess: (user: User) => void;
@@ -58,6 +59,21 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showRolePicker, setShowRolePicker] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (showAuthModal || showRolePicker) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showAuthModal, showRolePicker]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -105,22 +121,47 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const openAuth = (initialMode: 'login' | 'register', role?: 'doctor' | 'clinic') => {
     setMode(initialMode);
     if (role) setSelectedRole(role);
+    setAuthError(null);
+    setUnconfirmedEmail(false);
+    setResendSuccess(false);
     setShowAuthModal(true);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) return;
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      if (error) throw error;
+      setResendSuccess(true);
+      setAuthError(null);
+    } catch (error: any) {
+      console.error("Resend error", error);
+      setAuthError(error.message || "Error al reenviar el correo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
+    setAuthError(null);
+    setUnconfirmedEmail(false);
+    setResendSuccess(false);
     
     if (mode === 'register') {
       if (!selectedRole || !acceptedTerms) {
-        alert("Debes seleccionar un rol y aceptar los términos para continuar.");
+        setAuthError("Debes seleccionar un rol y aceptar los términos para continuar.");
         return;
       }
 
       const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
       if (!passwordRegex.test(password)) {
-        alert("La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 número y 1 símbolo especial.");
+        setAuthError("La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 número y 1 símbolo especial.");
         return;
       }
     }
@@ -140,24 +181,28 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         if (error) throw error;
         
         if (data.user && data.user.identities && data.user.identities.length === 0) {
-          alert('Esta cuenta ya está registrada. Por favor, inicia sesión.');
+          setAuthError('Esta cuenta ya está registrada. Por favor, inicia sesión.');
           setMode('login');
         } else if (!data.session && data.user) {
-          // This happens if "Confirm Email" is still enabled in Supabase settings
-          alert('¡Cuenta creada! Por favor, revisa tu correo electrónico para confirmar tu cuenta y luego inicia sesión. (Si no quieres usar correos, el administrador debe apagar "Confirm email" en Supabase).');
-          setMode('login');
+          // This happens if "Confirm Email" is enabled
+          setUnconfirmedEmail(true);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          if (error.message.includes('Invalid login credentials')) throw new Error('Credenciales inválidas.');
-          if (error.message.includes('Email not confirmed')) throw new Error('Por favor confirma tu correo.');
+          if (error.message.includes('Invalid login credentials')) {
+            throw new Error('El correo o la contraseña son incorrectos. Verificá los datos o asegúrate de haber creado tu cuenta primero.');
+          }
+          if (error.message.includes('Email not confirmed')) {
+            setUnconfirmedEmail(true);
+            return;
+          }
           throw error;
         }
       }
     } catch (error: any) {
       console.error("Auth error", error);
-      alert(error.message || "Error al procesar la solicitud. Por favor intenta nuevamente.");
+      setAuthError(error.message || "Error al procesar la solicitud.");
     } finally {
       setLoading(false);
     }
@@ -230,7 +275,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <div className="hidden md:flex items-center gap-8">
               <button onClick={() => scrollTo('como-funciona')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Cómo funciona</button>
               <button onClick={() => scrollTo('por-que')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Por qué usar</button>
-              <button onClick={() => scrollTo('seguridad')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Seguridad</button>
             </div>
 
             <div className="flex items-center gap-3">
@@ -359,6 +403,57 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           </div>
         </section>
 
+        {/* PROBLEMA VS SOLUCIÓN */}
+        <section className="py-24 bg-white border-t border-gray-100">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="space-y-12">
+              {[
+                {
+                  problem: "Grupos de WhatsApp, llamadas de último momento, acuerdos de palabra",
+                  solution: "Todo en un lugar, con registro y trazabilidad"
+                },
+                {
+                  problem: "Si un médico no aparece, la clínica no tiene forma de dejar registro",
+                  solution: "Sistema de ratings que construye reputación real"
+                },
+                {
+                  problem: "Si una clínica paga mal, el médico no puede advertirle a otros",
+                  solution: "Transparencia en ambas direcciones"
+                }
+              ].map((item, idx) => (
+                <div key={idx} className="flex flex-col md:flex-row items-center gap-8 md:gap-16 border-b border-gray-50 pb-12 last:border-0 last:pb-0">
+                  <div className="flex-1 w-full">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Problema</p>
+                    <p className="text-xl md:text-2xl font-medium text-gray-400 italic leading-snug">
+                      "{item.problem}"
+                    </p>
+                  </div>
+                  <div className="hidden md:block">
+                    <ChevronRight className="w-8 h-8 text-blue-200" />
+                  </div>
+                  <div className="flex-1 w-full bg-blue-50/50 p-6 md:p-8 rounded-3xl border border-blue-100/50 shadow-sm">
+                    <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2">Solución ABK</p>
+                    <p className="text-xl md:text-2xl font-black text-blue-900 leading-tight">
+                      {item.solution}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-20 text-center">
+              <motion.p 
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight"
+              >
+                No inventamos el mercado. <span className="text-blue-600 underline decoration-blue-200 decoration-4 underline-offset-8">Lo ordenamos.</span>
+              </motion.p>
+            </div>
+          </div>
+        </section>
+
         {/* POR QUÉ USAR - EDITORIAL STYLE */}
         <section id="por-que" className="py-24 bg-gray-50 border-y border-gray-200">
           <div className="max-w-4xl mx-auto px-4">
@@ -402,27 +497,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           </div>
         </section>
 
-        {/* CONFIANZA */}
-        <section id="seguridad" className="py-24 bg-blue-900 text-white">
-          <div className="max-w-6xl mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-6">Más seguridad para trabajar mejor</h2>
-            <p className="text-blue-100 text-lg max-w-2xl mx-auto mb-12">
-              Perfiles profesionales, datos organizados y un sistema pensado para dar más transparencia al vínculo entre instituciones y profesionales.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <span className="flex items-center gap-2 bg-blue-800/50 border border-blue-700 px-4 py-2 rounded-full font-medium">
-                <Check className="w-4 h-4 text-blue-300" /> Profesionales verificados
-              </span>
-              <span className="flex items-center gap-2 bg-blue-800/50 border border-blue-700 px-4 py-2 rounded-full font-medium">
-                <Check className="w-4 h-4 text-blue-300" /> Coberturas más ágiles
-              </span>
-              <span className="flex items-center gap-2 bg-blue-800/50 border border-blue-700 px-4 py-2 rounded-full font-medium">
-                <Check className="w-4 h-4 text-blue-300" /> Información centralizada
-              </span>
-            </div>
-          </div>
-        </section>
-
         {/* CTA FINAL */}
         <section className="py-24 bg-white border-t border-gray-100">
           <div className="max-w-4xl mx-auto px-4 text-center">
@@ -458,9 +532,9 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+              className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-8">
+              <div className="p-8 overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-2xl font-bold text-gray-900">
                     {mode === 'login' ? 'Ingresar a ABK' : 'Crear tu cuenta'}
@@ -508,14 +582,69 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                 </div>
 
                 <form onSubmit={handleAuthSubmit} className="space-y-5">
-                  {mode === 'register' && !selectedRole && (
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <button type="button" onClick={() => setSelectedRole('doctor')} className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 ${selectedRole === 'doctor' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                          <Stethoscope className="w-6 h-6" /> <span className="text-sm font-bold">Profesional</span>
+                  {authError && (
+                    <div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-medium flex items-center gap-2">
+                       <XCircle className="w-4 h-4 shrink-0" />
+                       <span>{authError}</span>
+                    </div>
+                  )}
+
+                  {unconfirmedEmail && (
+                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl space-y-3">
+                      <div className="flex items-start gap-3 text-orange-800">
+                        <Mail className="w-5 h-5 shrink-0 mt-0.5" />
+                        <div className="text-xs leading-relaxed">
+                          <p className="font-bold">Correo no confirmado</p>
+                          <p>Todavía no activaste tu cuenta. Revisá tu casilla (spam incluido).</p>
+                        </div>
+                      </div>
+                      {!resendSuccess ? (
+                        <button 
+                          type="button" 
+                          onClick={handleResendConfirmation}
+                          disabled={loading}
+                          className="w-full py-2 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition"
+                        >
+                          {loading ? 'Reenviando...' : 'Reenviar correo de confirmación'}
                         </button>
-                        <button type="button" onClick={() => setSelectedRole('clinic')} className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 ${selectedRole === 'clinic' ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                          <Building2 className="w-6 h-6" /> <span className="text-sm font-bold">Institución</span>
-                        </button>
+                      ) : (
+                        <div className="py-2 px-3 bg-green-100 text-green-700 rounded-lg text-[11px] font-bold text-center">
+                          ¡Correo reenviado con éxito!
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {mode === 'register' && (
+                      <div className="space-y-3 mb-6">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Elegí tu tipo de cuenta</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button 
+                            type="button" 
+                            onClick={() => setSelectedRole('doctor')} 
+                            className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${selectedRole === 'doctor' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' : 'border-gray-100 text-gray-400 hover:border-gray-200 bg-gray-50/50'}`}
+                          >
+                            <Stethoscope className="w-6 h-6" /> 
+                            <span className="text-sm font-bold">Soy Profesional</span>
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => setSelectedRole('clinic')} 
+                            className={`p-3 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${selectedRole === 'clinic' ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm' : 'border-gray-100 text-gray-400 hover:border-gray-200 bg-gray-50/50'}`}
+                          >
+                            <Building2 className="w-6 h-6" /> 
+                            <span className="text-sm font-bold">Soy Institución</span>
+                          </button>
+                        </div>
+                        {selectedRole && (
+                          <div className={cn(
+                            "text-[11px] font-medium px-3 py-2 rounded-lg border flex items-center gap-2 bg-opacity-30",
+                            selectedRole === 'doctor' ? "bg-blue-50 border-blue-100 text-blue-700" : "bg-indigo-50 border-indigo-100 text-indigo-700"
+                          )}>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Creando cuenta para {selectedRole === 'doctor' ? 'médicos y profesionales de salud' : 'clínicas, sanatorios y productores'}</span>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -531,6 +660,16 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                         <p className="text-[11px] text-gray-500 mt-2 px-1 leading-tight">Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 símbolo (@$!%*?&).</p>
                       )}
                     </div>
+
+                    {mode === 'register' && (
+                      <div className="flex items-start gap-3 bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                        <Mail className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-blue-800 leading-relaxed">
+                          <p className="font-bold mb-0.5">Validación de correo</p>
+                          <p className="opacity-80">Te enviaremos un link de confirmación para activar tu cuenta de inmediato.</p>
+                        </div>
+                      </div>
+                    )}
 
                     {mode === 'register' && (
                       <div className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">

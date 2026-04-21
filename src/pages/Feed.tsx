@@ -58,7 +58,17 @@ export default function Feed({ user }: FeedProps) {
         .order('date', { ascending: true });
       
       if (error) throw error;
-      setShifts(data as Shift[]);
+      
+      // Filter out past shifts from feed
+      const now = new Date();
+      const openAndFuture = (data as Shift[]).filter(s => {
+        const [h, m] = (s.start_time || "00:00").split(':').map(Number);
+        const shiftStart = new Date(s.date);
+        shiftStart.setHours(h, m, 0, 0);
+        return shiftStart > now;
+      });
+
+      setShifts(openAndFuture);
     } catch (error) {
       console.error("Error fetching shifts:", error);
     } finally {
@@ -122,6 +132,30 @@ export default function Feed({ user }: FeedProps) {
       fetchShifts();
     } catch (error) {
       toast.error('Error al enviar la postulación');
+    }
+  };
+
+  const handleConfirmApplication = async (shiftId: string) => {
+    try {
+      const shift = shifts.find(s => s.id === shiftId);
+      if (!shift) return;
+
+      const confirmed = shift.confirmed_applicants || [];
+      if (confirmed.includes(user.id)) return;
+
+      const { error } = await supabase
+        .from('shifts')
+        .update({
+          confirmed_applicants: [...confirmed, user.id]
+        })
+        .eq('id', shiftId);
+
+      if (error) throw error;
+      toast.success('¡Postulación confirmada oficialmente!');
+      fetchShifts();
+    } catch (error: any) {
+      console.error("Error confirming application:", error);
+      toast.error(`Error: ${error.message || "No se pudo confirmar la postulación"}`);
     }
   };
 
@@ -244,6 +278,7 @@ export default function Feed({ user }: FeedProps) {
                     userVerificationStatus={user.verification_status}
                     isMyShift={shift.applicants.includes(user.id)}
                     onApply={() => handleApply(shift.id)} 
+                    onConfirmApplication={() => handleConfirmApplication(shift.id)}
                     onNegotiate={() => {
                       setNegotiatingShiftId(shift.id);
                       setProposedPrice(shift.price.toString());

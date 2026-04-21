@@ -54,14 +54,37 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       if (error) throw error;
       
       // Filter only shifts relevant to me
+      const now = new Date();
       const myData = (data as Shift[]).filter(s => {
         // Ignorar si el usuario eligió ocultarla
         if (dismissedShiftIds.includes(s.id)) return false;
 
-        if (['confirmed', 'completed', 'noshow', 'cancelled_by_clinic'].includes(s.status)) {
-          return s.assigned_doctor_id === user.id;
+        const shiftDate = new Date(s.date);
+        const [startH, startM] = (s.start_time || "00:00").split(':').map(Number);
+        const [endH, endM] = (s.end_time || "23:59").split(':').map(Number);
+        
+        const shiftStart = new Date(s.date);
+        shiftStart.setHours(startH, startM, 0, 0);
+        
+        const shiftEnd = new Date(s.date);
+        shiftEnd.setHours(endH, endM, 0, 0);
+
+        const isAssigned = s.assigned_doctor_id === user.id;
+        const isPast = shiftStart < now;
+        
+        // Si la guardia ya pasó
+        if (isPast) {
+          // Si no soy el asignado, desaparece
+          if (!isAssigned) return false;
+          // Si soy el asignado, la dejo 24hs más para que la califique
+          const hoursSinceEnd = (now.getTime() - shiftEnd.getTime()) / (1000 * 60 * 60);
+          if (hoursSinceEnd > 24) return false;
         }
-        return s.applicants.includes(user.id) || s.assigned_doctor_id === user.id;
+
+        if (['confirmed', 'completed', 'noshow', 'cancelled_by_clinic'].includes(s.status)) {
+          return isAssigned;
+        }
+        return s.applicants.includes(user.id) || isAssigned;
       });
 
       setShifts(myData);
@@ -142,9 +165,9 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       if (error) throw error;
       toast.success('¡Postulación confirmada oficialmente!');
       fetchShifts();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error confirming application:", error);
-      toast.error("Error al confirmar la postulación.");
+      toast.error(`Error: ${error.message || "No se pudo confirmar la postulación"}`);
     }
   };
 

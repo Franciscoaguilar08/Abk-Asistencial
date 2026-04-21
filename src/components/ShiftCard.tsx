@@ -43,20 +43,40 @@ export default function ShiftCard({
 }: ShiftCardProps) {
   const isVerified = userVerificationStatus === 'verified';
   const isAssigned = shift.assigned_doctor_id === userId;
-  const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
-  const isConfirmedApplication = shift.confirmed_applicants?.includes(userId || '');
   const isTerminal = shift.status === 'completed' || shift.status === 'noshow' || shift.status === 'cancelled_by_clinic';
   
   const shiftDate = new Date(shift.date);
+  const [startHour, startMinute] = (shift.start_time || "00:00").split(':').map(Number);
+  const shiftFullDate = new Date(shift.date);
+  shiftFullDate.setHours(startHour, startMinute, 0, 0);
+  
   const isShiftTomorrow = isTomorrow(shiftDate);
 
-  const hoursUntilShift = (shiftDate.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+  const hoursUntilShift = (shiftFullDate.getTime() - new Date().getTime()) / (1000 * 60 * 60);
   const canWithdraw = hoursUntilShift > 24;
 
   const [ratingVal, setRatingVal] = useState(0);
   const [reviewTxt, setReviewTxt] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [localConfirmed, setLocalConfirmed] = useState(false);
+
+  const isConfirmedApplication = localConfirmed || shift.confirmed_applicants?.includes(userId || '');
+
+  const handleConfirmApplication = async () => {
+    if (!onConfirmApplication) return;
+    setLocalConfirmed(true);
+    setIsConfirming(true);
+    try {
+      await onConfirmApplication();
+    } catch (error) {
+      setLocalConfirmed(false);
+      throw error;
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   const submitRating = async () => {
     if (ratingVal === 0) {
@@ -260,7 +280,7 @@ export default function ShiftCard({
                   Asignada a ti
                 </span>
               ) : isConfirmedApplication ? (
-                <div className="bg-blue-50 text-blue-700 p-3 rounded-lg border border-blue-100 text-center w-full animate-in fade-in zoom-in-95 duration-300">
+                <div className="bg-green-50 text-green-700 p-3 rounded-lg border border-green-200 text-center w-full animate-in fade-in zoom-in-95 duration-300">
                    <div className="flex items-center justify-center gap-2 mb-1">
                      <CheckCircle2 className="w-4 h-4" />
                      <span className="font-bold">Postulación Confirmada</span>
@@ -290,11 +310,21 @@ export default function ShiftCard({
                   ) : (
                     /* Confirmation button in Dashboard */
                     <button 
-                      onClick={onConfirmApplication}
-                      className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 active:scale-[0.98] text-white rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                      onClick={handleConfirmApplication}
+                      disabled={isConfirming}
+                      className="w-full py-2.5 bg-yellow-500 hover:bg-yellow-600 active:scale-[0.98] text-white rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
                     >
-                      <CheckCircle2 className="w-4 h-4" />
-                      Confirmar Postulación
+                      {isConfirming ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Confirmando...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          Confirmar Postulación
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -304,7 +334,12 @@ export default function ShiftCard({
             {isMyShift && onWithdraw && !isAssigned && shift.status === 'open' && (
               <div className="mt-1 w-full">
                 {!canWithdraw && (
-                  <p className="text-[10px] text-red-500 text-center mb-1 font-medium italic">No puedes retirar tu postulación faltando menos de 24hs</p>
+                  <p className="text-[10px] text-red-500 text-center mb-1 font-medium italic">
+                    {hoursUntilShift > 0 
+                      ? `No puedes retirar tu postulación faltando menos de 24hs (faltan ${Math.floor(hoursUntilShift)}hs)`
+                      : "La guardia ya ha comenzado"
+                    }
+                  </p>
                 )}
                 <button 
                   onClick={() => setIsWithdrawModalOpen(true)}
@@ -316,7 +351,12 @@ export default function ShiftCard({
                       : "border-gray-100 text-gray-400 cursor-not-allowed"
                   )}
                 >
-                  {canWithdraw ? 'Retirar postulación' : 'Retiro bloqueado'}
+                  {canWithdraw 
+                    ? 'Retirar postulación' 
+                    : hoursUntilShift > 0 
+                      ? `Retiro bloqueado (faltan ${Math.floor(hoursUntilShift)}hs)`
+                      : 'Retiro bloqueado'
+                  }
                 </button>
               </div>
             )}
