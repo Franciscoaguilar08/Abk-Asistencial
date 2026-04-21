@@ -51,6 +51,7 @@ export interface Shift {
   is_negotiable?: boolean; // Indicates if the price can be negotiated
   status: ShiftStatus;
   applicants: string[]; // array of doctor IDs
+  confirmed_applicants?: string[]; // array of doctor IDs who confirmed their interest
   applicant_proposals?: Record<string, number>; // Maps doctor ID to proposed price
   assigned_doctor_id?: string;
   attendance_confirmed?: boolean; // Confirmación 24hs antes

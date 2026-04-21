@@ -14,6 +14,7 @@ interface ShiftCardProps {
   shift: Shift;
   onApply?: () => void;
   onWithdraw?: () => void;
+  onConfirmApplication?: () => void;
   onRefresh?: () => void;
   onOpenChat?: () => void;
   onNegotiate?: () => void;
@@ -29,6 +30,7 @@ export default function ShiftCard({
   shift, 
   onApply, 
   onWithdraw, 
+  onConfirmApplication,
   onRefresh, 
   onOpenChat, 
   onNegotiate, 
@@ -42,10 +44,14 @@ export default function ShiftCard({
   const isVerified = userVerificationStatus === 'verified';
   const isAssigned = shift.assigned_doctor_id === userId;
   const isPending = isMyShift && !isAssigned && shift.status !== 'confirmed';
+  const isConfirmedApplication = shift.confirmed_applicants?.includes(userId || '');
   const isTerminal = shift.status === 'completed' || shift.status === 'noshow' || shift.status === 'cancelled_by_clinic';
   
   const shiftDate = new Date(shift.date);
   const isShiftTomorrow = isTomorrow(shiftDate);
+
+  const hoursUntilShift = (shiftDate.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+  const canWithdraw = hoursUntilShift > 24;
 
   const [ratingVal, setRatingVal] = useState(0);
   const [reviewTxt, setReviewTxt] = useState('');
@@ -295,22 +301,45 @@ export default function ShiftCard({
                   <div className="bg-yellow-50 text-yellow-800 p-3 rounded-lg border border-yellow-200 text-center w-full">
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <Clock className="w-4 h-4" />
-                      <span>Postulación en evaluación</span>
+                      <span>{isConfirmedApplication ? 'Postulación Confirmada' : 'Interés Expresado'}</span>
                     </div>
                     <p className="text-xs font-normal opacity-80 mt-1">
-                      La institución revisará tu perfil. Si eres el candidato elegido, se habilitará aquí el número de contacto directo para coordinar.
+                      {isConfirmedApplication 
+                        ? 'La institución revisará tu perfil confirmado. Si eres el candidato elegido, se habilitará el contacto.' 
+                        : 'Aún no has confirmado tu postulación. Debes confirmarla para que la institución te considere seriamente.'}
                     </p>
+                    
+                    {!isConfirmedApplication && onConfirmApplication && (
+                      <button 
+                        onClick={onConfirmApplication}
+                        className="mt-3 w-full py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Confirmar Postulación
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
 
               {isPending && onWithdraw && (
-                <button 
-                  onClick={() => setIsWithdrawModalOpen(true)}
-                  className="mt-2 w-full py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Retirar postulación
-                </button>
+                <div className="mt-2 w-full">
+                  {!canWithdraw && (
+                    <p className="text-[10px] text-red-500 text-center mb-1 font-medium">No puedes retirar tu postulación faltando menos de 24hs</p>
+                  )}
+                  <button 
+                    onClick={() => setIsWithdrawModalOpen(true)}
+                    disabled={!canWithdraw}
+                    className={cn(
+                      "w-full py-2 bg-white border rounded-lg text-sm font-medium transition-colors",
+                      canWithdraw 
+                        ? "border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+                        : "border-gray-200 text-gray-400 cursor-not-allowed"
+                    )}
+                  >
+                    Retirar postulación
+                  </button>
+                </div>
               )}
 
               {isAssigned && (

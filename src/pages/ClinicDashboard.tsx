@@ -849,6 +849,11 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
                         Oferta: ${shift.applicant_proposals[applicant.id].toLocaleString('es-AR')}
                       </div>
                     )}
+                    {shift.confirmed_applicants?.includes(applicant.id) && (
+                      <div className="mt-1 ml-1 text-[10px] font-bold text-yellow-700 bg-yellow-50 inline-block px-1.5 py-0.5 rounded border border-yellow-100 uppercase tracking-tighter">
+                        Confirmado
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button 

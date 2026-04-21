@@ -96,8 +96,12 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       if (!shift) return;
 
       const newApplicants = shift.applicants.filter(id => id !== user.id);
+      const newConfirmed = (shift.confirmed_applicants || []).filter(id => id !== user.id);
       
-      const updatePayload: any = { applicants: newApplicants };
+      const updatePayload: any = { 
+        applicants: newApplicants,
+        confirmed_applicants: newConfirmed
+      };
       
       if (shift.applicant_proposals && shift.applicant_proposals[user.id]) {
         const newProposals = { ...shift.applicant_proposals };
@@ -117,6 +121,30 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
     } catch (error) {
       console.error("Error withdrawing from shift:", error);
       toast.error("Error al retirar la postulación.");
+    }
+  };
+
+  const handleConfirmApplication = async (shiftId: string) => {
+    try {
+      const shift = shifts.find(s => s.id === shiftId);
+      if (!shift) return;
+
+      const confirmed = shift.confirmed_applicants || [];
+      if (confirmed.includes(user.id)) return;
+
+      const { error } = await supabase
+        .from('shifts')
+        .update({
+          confirmed_applicants: [...confirmed, user.id]
+        })
+        .eq('id', shiftId);
+
+      if (error) throw error;
+      toast.success('¡Postulación confirmada oficialmente!');
+      fetchShifts();
+    } catch (error) {
+      console.error("Error confirming application:", error);
+      toast.error("Error al confirmar la postulación.");
     }
   };
 
@@ -163,6 +191,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
               userId={user.id} 
               userVerificationStatus={user.verification_status}
               onWithdraw={() => handleWithdraw(shift.id)}
+              onConfirmApplication={() => handleConfirmApplication(shift.id)}
               onDelete={() => handleDismissShift(shift.id)}
               onRefresh={fetchShifts}
               onOpenChat={() => setActiveChat({ shiftId: shift.id, receiverId: shift.clinic_id, receiverName: shift.clinic_name })}

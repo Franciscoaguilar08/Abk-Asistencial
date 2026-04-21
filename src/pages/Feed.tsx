@@ -117,7 +117,7 @@ export default function Feed({ user }: FeedProps) {
         shift_id: shiftId
       });
 
-      toast.success(customPrice ? 'Oferta enviada con éxito' : 'Postulación enviada con éxito');
+      toast.success(customPrice ? 'Oferta enviada. No olvides CONFIRMARLA desde tu panel para que sea oficial.' : 'Interés enviado. No olvides CONFIRMAR la postulación desde tu panel.');
       setNegotiatingShiftId(null);
       fetchShifts();
     } catch (error) {
