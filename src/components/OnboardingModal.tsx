@@ -20,9 +20,11 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
     specialty: '',
     cuit: user.cuit || '',
     no_cuit: user.cuit === 'N/A',
+    bio: '',
+    linkedin_url: '',
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
     setFormData((prev) => ({ ...prev, [e.target.name]: value }));
   };
@@ -34,6 +36,8 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
     try {
       const updatePayload: any = {
         name: formData.name || null,
+        bio: formData.bio || null,
+        linkedin_url: formData.linkedin_url || null,
         verification_status: 'verified', // Auto-verify in Beta Phase for now
       };
 
@@ -116,6 +120,22 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">LinkedIn (Opcional)</label>
+                <input type="url" name="linkedin_url" value={formData.linkedin_url} onChange={handleChange} placeholder="https://linkedin.com/in/tu-perfil" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">
+                  {user.role === 'doctor' ? 'Resumen Profesional (Mini-CV)' : 'Descripción de la Institución'}
+                </label>
+                <textarea 
+                  name="bio" 
+                  value={formData.bio} 
+                  onChange={handleChange} 
+                  placeholder={user.role === 'doctor' ? "Ej: Médico especialista con 5 años de experiencia..." : "Ej: Clínica de atención primaria..."}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow min-h-[100px]"
+                />
+              </div>
             </>
           ) : (
             <>
@@ -146,6 +166,20 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
                   onChange={handleChange} 
                   placeholder={formData.no_cuit ? "No aplica verificación por CUIT" : "Ej: 30112233445"}
                   className={`w-full px-4 py-3 border rounded-xl outline-none transition-all ${formData.no_cuit ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus:ring-2 focus:ring-blue-500'}`} 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">LinkedIn o Web (Opcional)</label>
+                <input type="url" name="linkedin_url" value={formData.linkedin_url} onChange={handleChange} placeholder="https://linkedin.com/company/tu-institucion" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Descripción de la Institución</label>
+                <textarea 
+                  name="bio" 
+                  value={formData.bio} 
+                  onChange={handleChange} 
+                  placeholder="Describe brevemente la institución..."
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-shadow min-h-[100px]"
                 />
               </div>
             </>

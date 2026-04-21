@@ -8,6 +8,7 @@ export interface User {
   avatar?: string;
   phone?: string;
   bio?: string; // Para CV de médicos o descripción de clínicas
+  linkedin_url?: string;
   dni?: string; // Para profesionales
   license_number?: string; // Matrícula
   license_image_url?: string; // Captura de Mi Argentina

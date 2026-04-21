@@ -18,6 +18,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     name: user.name || '',
     phone: user.phone || '',
     bio: user.bio || '',
+    linkedin_url: user.linkedin_url || '',
     // Doctor
     dni: user.dni || '',
     license_number: user.license_number || '',
@@ -39,6 +40,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
       name: user.name || '',
       phone: user.phone || '',
       bio: user.bio || '',
+      linkedin_url: user.linkedin_url || '',
       dni: user.dni || '',
       license_number: user.license_number || '',
       jurisdiction: user.jurisdiction || '',
@@ -68,6 +70,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
         name: formData.name || null,
         phone: formData.phone || null,
         bio: formData.bio || null,
+        linkedin_url: formData.linkedin_url || null,
         availability: formData.availability || null,
         ...(user.role === 'doctor' ? {
           dni: formData.dni || null,
@@ -249,6 +252,17 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                   value={formData.phone} 
                   onChange={handleChange}
                   placeholder="Ej: +54 11 1234 5678"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">LinkedIn URL</label>
+                <input 
+                  type="url" 
+                  name="linkedin_url" 
+                  value={formData.linkedin_url} 
+                  onChange={handleChange}
+                  placeholder="https://linkedin.com/in/tu-perfil"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
                 />
               </div>
