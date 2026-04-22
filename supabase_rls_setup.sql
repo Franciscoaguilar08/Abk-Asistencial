@@ -77,6 +77,7 @@ ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS applicants UUID[] DEFAULT '{}';
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS confirmed_applicants UUID[] DEFAULT '{}';
 ALTER TABLE shifts ADD COLUMN IF NOT EXISTS applicant_proposals JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS clinic_avatar TEXT;
 
 -- Permite que cualquier médico o clínica autenticada vea las guardias
 DROP POLICY IF EXISTS "Shifts are viewable by authenticated users" ON shifts;

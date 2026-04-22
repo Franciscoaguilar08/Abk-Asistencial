@@ -338,7 +338,16 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 italic transition-all hover:shadow-md">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Oportunidades</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Oportunidades</h1>
+            <span className="text-gray-300 text-3xl font-light">/</span>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="text-3xl font-medium text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+            >
+              Crear oportunidad
+            </button>
+          </div>
           <p className="text-gray-500 mt-1">Gestioná tus búsquedas y asignaciones.</p>
         </div>
         <button 
