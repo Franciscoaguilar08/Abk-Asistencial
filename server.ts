@@ -42,6 +42,91 @@ async function startServer() {
     }
   });
 
+// Notificar al médico que fue asignado a una guardia
+  app.post('/api/notify-assignment', async (req, res) => {
+    const { doctorEmail, doctorName, shiftData } = req.body;
+    if (!resend) return res.json({ success: true });
+    try {
+      await resend.emails.send({
+        from: 'ABK Asistencial <notifications@resend.dev>',
+        to: [doctorEmail],
+        subject: `¡Te asignaron a una guardia! — ABK Asistencial`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background-color: #ffffff;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <img src="https://ivkklkvhfmxdvyqzyqvw.supabase.co/storage/v1/object/public/assets/Logo_de_Abk.png" alt="ABK Asistencial" style="height: 64px; width: 64px; object-fit: contain;" />
+              <p style="font-size: 18px; font-weight: bold; color: #111827; margin-top: 12px;">ABK Asistencial</p>
+            </div>
+            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 12px;">¡Felicitaciones, ${doctorName}!</h2>
+            <p style="font-size: 15px; color: #4b5563; line-height: 1.6;">Te asignaron a una guardia. Estos son los detalles:</p>
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 6px 0;"><strong>Institución:</strong> ${shiftData.clinic_name}</p>
+              <p style="margin: 6px 0;"><strong>Especialidad:</strong> ${shiftData.specialty}</p>
+              <p style="margin: 6px 0;"><strong>Fecha:</strong> ${shiftData.date}</p>
+              <p style="margin: 6px 0;"><strong>Horario:</strong> ${shiftData.start_time} - ${shiftData.end_time}</p>
+              <p style="margin: 6px 0;"><strong>Ubicación:</strong> ${shiftData.location}</p>
+              <p style="margin: 6px 0;"><strong>Honorarios:</strong> $${shiftData.price.toLocaleString('es-AR')}</p>
+            </div>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="https://abk-asistencial.vercel.app" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+                Ver mi guardia
+              </a>
+            </div>
+            <p style="font-size: 13px; color: #9ca3af; text-align: center; margin-top: 32px;">
+              Este es un correo automático de ABK Asistencial. No respondas a este mensaje.
+            </p>
+          </div>
+        `
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error sending assignment email:', err);
+      res.status(500).json({ success: false });
+    }
+  });
+
+  // Notificar a la clínica que un médico se postuló
+  app.post('/api/notify-application', async (req, res) => {
+    const { clinicEmail, clinicName, doctorName, shiftData } = req.body;
+    if (!resend) return res.json({ success: true });
+    try {
+      await resend.emails.send({
+        from: 'ABK Asistencial <notifications@resend.dev>',
+        to: [clinicEmail],
+        subject: `Nuevo postulante para tu guardia — ABK Asistencial`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background-color: #ffffff;">
+            <div style="text-align: center; margin-bottom: 32px;">
+              <img src="https://ivkklkvhfmxdvyqzyqvw.supabase.co/storage/v1/object/public/assets/Logo_de_Abk.png" alt="ABK Asistencial" style="height: 64px; width: 64px; object-fit: contain;" />
+              <p style="font-size: 18px; font-weight: bold; color: #111827; margin-top: 12px;">ABK Asistencial</p>
+            </div>
+            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 12px;">Nuevo postulante</h2>
+            <p style="font-size: 15px; color: #4b5563; line-height: 1.6;">
+              <strong>${doctorName}</strong> se postuló para una de tus guardias en ABK Asistencial.
+            </p>
+            <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 6px 0;"><strong>Especialidad:</strong> ${shiftData.specialty}</p>
+              <p style="margin: 6px 0;"><strong>Fecha:</strong> ${shiftData.date}</p>
+              <p style="margin: 6px 0;"><strong>Horario:</strong> ${shiftData.start_time} - ${shiftData.end_time}</p>
+            </div>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="https://abk-asistencial.vercel.app" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+                Ver postulantes
+              </a>
+            </div>
+            <p style="font-size: 13px; color: #9ca3af; text-align: center; margin-top: 32px;">
+              Este es un correo automático de ABK Asistencial. No respondas a este mensaje.
+            </p>
+          </div>
+        `
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error sending application email:', err);
+      res.status(500).json({ success: false });
+    }
+  });
+
   app.post('/api/notify-new-shift', async (req, res) => {
     const { shiftData, recipients } = req.body;
     

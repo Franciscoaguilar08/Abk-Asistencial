@@ -248,6 +248,15 @@ export default function Feed({ user }: FeedProps) {
         shift_id: shiftId
       });
 
+      const { data: clinicData } = await supabase.from('users').select('email, name').eq('id', shift.clinic_id).single();
+      if (clinicData?.email) {
+        fetch('/api/notify-application', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clinicEmail: clinicData.email, clinicName: clinicData.name, doctorName: user.name, shiftData: shift })
+        }).catch(console.error);
+      }
+
       toast.success(customPrice ? 'Oferta enviada. No olvides CONFIRMARLA desde tu panel para que sea oficial.' : 'Interés enviado. No olvides CONFIRMAR la postulación desde tu panel.');
       setNegotiatingShiftId(null);
       fetchShifts();

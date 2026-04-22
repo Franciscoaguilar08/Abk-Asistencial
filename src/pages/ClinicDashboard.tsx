@@ -227,6 +227,15 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         shift_id: shiftId
       });
 
+      const { data: doctorData } = await supabase.from('users').select('email, name').eq('id', doctorId).single();
+      if (doctorData?.email) {
+        fetch('/api/notify-assignment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doctorEmail: doctorData.email, doctorName: doctorData.name, shiftData: shift })
+        }).catch(console.error);
+      }
+
       toast.success('Profesional asignado exitosamente');
       fetchShifts();
     } catch (error) {
