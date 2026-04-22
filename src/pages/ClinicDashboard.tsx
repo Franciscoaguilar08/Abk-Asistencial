@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare, BriefcaseMedical, LayoutDashboard, Globe, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { cn, areShiftsOverlapping } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
 import ViewProfileModal from '../components/ViewProfileModal';
@@ -15,6 +16,8 @@ interface ClinicDashboardProps {
 }
 
 export default function ClinicDashboard({ user }: ClinicDashboardProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -35,6 +38,13 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   useEffect(() => {
     fetchShifts();
     
+    // Check if we should open the modal from navigation state
+    if (location.state?.openModal) {
+      setIsModalOpen(true);
+      // Clear state so it doesn't reopen on refresh/back
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+
     // Subscribe to shifts table for this specific clinic
     const channel = supabase
       .channel(`shifts-clinic-${user.id}`)
@@ -338,16 +348,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 italic transition-all hover:shadow-md">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Oportunidades</h1>
-            <span className="text-gray-300 text-3xl font-light">/</span>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="text-3xl font-medium text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
-            >
-              Crear oportunidad
-            </button>
-          </div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Oportunidades</h1>
           <p className="text-gray-500 mt-1">Gestioná tus búsquedas y asignaciones.</p>
         </div>
         <button 
