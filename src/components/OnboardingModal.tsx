@@ -470,24 +470,31 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
               </>
             )}
 
-            {user.role === 'doctor' && (
-              <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <label className="flex items-start gap-4 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    name="affidavit_accepted"
-                    checked={formData.affidavit_accepted}
-                    onChange={handleChange as any}
-                    required
-                    className="mt-1 w-5 h-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded-lg"
-                  />
-                  <span className="text-xs text-amber-900 leading-relaxed font-bold">
-                    <strong>Declaración Jurada:</strong> Declaro bajo juramento que los datos aportados en mi perfil y la documentación adjunta son verídicos. 
-                    Entiendo que la falsificación de estos datos puede derivar en la suspensión definitiva de la cuenta y acciones legales correspondientes.
-                  </span>
-                </label>
-              </div>
-            )}
+            <div className={cn(
+              "border rounded-3xl p-6 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-500",
+              user.role === 'doctor' ? "bg-amber-50 border-amber-100" : "bg-purple-50 border-purple-100"
+            )}>
+              <label className="flex items-start gap-4 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="affidavit_accepted"
+                  checked={formData.affidavit_accepted}
+                  onChange={handleChange as any}
+                  required
+                  className={cn(
+                    "mt-1 w-5 h-5 focus:ring-offset-2 border-gray-300 rounded-lg",
+                    user.role === 'doctor' ? "text-blue-600 focus:ring-blue-500" : "text-purple-600 focus:ring-purple-500"
+                  )}
+                />
+                <span className={cn(
+                  "text-xs leading-relaxed font-bold",
+                  user.role === 'doctor' ? "text-amber-900" : "text-purple-900"
+                )}>
+                  <strong>Declaración Jurada:</strong> Declaro bajo juramento que los datos aportados en mi perfil y la documentación adjunta son verídicos. 
+                  Entiendo que la falsificación de estos datos puede derivar en la suspensión definitiva de la cuenta y acciones legales correspondientes.
+                </span>
+              </label>
+            </div>
           </div>
 
           {/* Footer Actions */}

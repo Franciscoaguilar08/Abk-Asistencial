@@ -122,7 +122,6 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
           years_of_experience: formData.years_of_experience || null,
           cv_url: formData.cv_url || null,
           license_image_url: formData.license_image_url || null,
-          affidavit_accepted: formData.affidavit_accepted,
         } : {
           cuit: formData.no_cuit ? 'N/A' : (formData.cuit || null),
           address: formData.address || null,
@@ -131,7 +130,8 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
           needed_specialties: formData.needed_specialties || [],
           contact_hours: formData.contact_hours || null,
           avatar: formData.avatar || null
-        })
+        }),
+        affidavit_accepted: formData.affidavit_accepted,
       };
 
       const { data, error } = await supabase
@@ -828,18 +828,27 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                <p className="text-xs text-gray-500 mt-1">Este texto será clave para que te conozcan en las postulaciones.</p>
             </div>
 
-            {user.role === 'doctor' && !user.affidavit_accepted && (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {!user.affidavit_accepted && (
+              <div className={cn(
+                "rounded-xl p-4 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-500",
+                user.role === 'doctor' ? "bg-amber-50 border border-amber-100" : "bg-purple-50 border border-purple-100"
+              )}>
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input 
                     type="checkbox" 
                     name="affidavit_accepted"
                     checked={formData.affidavit_accepted}
-                    onChange={handleChange}
+                    onChange={handleChange as any}
                     required
-                    className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className={cn(
+                      "mt-1 w-4 h-4 rounded border-gray-300 focus:ring-offset-2",
+                      user.role === 'doctor' ? "text-blue-600 focus:ring-blue-500" : "text-purple-600 focus:ring-purple-500"
+                    )}
                   />
-                  <span className="text-xs text-amber-900 leading-relaxed font-medium">
+                  <span className={cn(
+                    "text-xs leading-relaxed font-medium",
+                    user.role === 'doctor' ? "text-amber-900" : "text-purple-900"
+                  )}>
                     <strong>Declaración Jurada:</strong> Declaro bajo juramento que los datos aportados en mi perfil y la documentación adjunta son verídicos. 
                     Entiendo que la falsificación de estos datos puede derivar en la suspensión definitiva de la cuenta y acciones legales correspondientes.
                   </span>
@@ -847,10 +856,13 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
               </div>
             )}
 
-            {user.role === 'doctor' && user.affidavit_accepted && (
-              <div className="flex items-center gap-2 text-xs text-green-600 font-semibold px-1 mt-4">
+            {user.affidavit_accepted && (
+              <div className={cn(
+                "flex items-center gap-2 text-xs font-semibold px-1 mt-4 transition-colors",
+                user.role === 'doctor' ? "text-green-600" : "text-purple-600"
+              )}>
                 <ShieldCheck className="w-4 h-4" />
-                Declaración jurada aceptada el {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'con éxito'}
+                Declaración jurada aceptada con éxito
               </div>
             )}
           </div>
