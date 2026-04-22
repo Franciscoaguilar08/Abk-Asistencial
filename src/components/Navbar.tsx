@@ -103,10 +103,13 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                     Mis Postulaciones
                   </Link>
                 ) : (
-                  <Link to="/clinic" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors flex items-center gap-1">
-                    Mis Oportunidades
-                    <span className="text-gray-300 font-light translate-y-[1px]">/</span>
-                    <span className="text-sm font-medium text-gray-400">Crear oportunidad</span>
+                  <Link to="/clinic" className={cn(
+                    "text-sm font-semibold transition-colors flex items-center gap-1",
+                    location.pathname === '/clinic' ? "text-blue-600" : "text-gray-600 hover:text-blue-600"
+                  )}>
+                    <span>Mis Oportunidades</span>
+                    <span className="font-light opacity-50">/</span>
+                    <span>Crear oportunidad</span>
                   </Link>
                 )}
                 <Link to="/profile" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
