@@ -36,7 +36,7 @@ const SPECIALTIES = [
   'Endocrinología', 'Reumatología', 'Infectología', 'Hematología', 'Oncología', 
   'Nefrología', 'Neumonología', 'Cirugía General', 'Anestesiología', 'Medicina General', 
   'Emergentología', 'Diagnóstico por Imágenes', 'Kinesiología', 'Nutrición',
-  'Bioquímica', 'Psicología', 'Odontología', 'Fonoaudiología'
+  'Bioquímica', 'Psicología', 'Odontología', 'Fonoaudiología', 'Otro'
 ];
 
 export default function Profile({ user, onProfileUpdate }: ProfileProps) {
