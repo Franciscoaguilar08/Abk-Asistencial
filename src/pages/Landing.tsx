@@ -319,6 +319,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             
             <div className="hidden md:flex items-center gap-8">
               <button onClick={() => scrollTo('como-funciona')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Cómo funciona</button>
+              <button onClick={() => scrollTo('que-resolvemos')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Qué resolvemos</button>
               <button onClick={() => scrollTo('por-que')} className="text-sm font-medium text-gray-600 hover:text-blue-600 transition">Por qué usar</button>
             </div>
 
@@ -449,7 +450,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         </section>
 
         {/* PROBLEMA VS SOLUCIÓN */}
-        <section className="py-24 bg-white border-t border-gray-100">
+        <section id="que-resolvemos" className="py-24 bg-white border-t border-gray-100">
           <div className="max-w-5xl mx-auto px-4">
             <div className="space-y-12">
               {[
