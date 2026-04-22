@@ -17,6 +17,8 @@ export interface User {
   cuit?: string; // Para instituciones
   verification_status?: 'unverified' | 'pending' | 'verified' | 'rejected';
   // Doctor specific
+  secondary_specialties?: string[];
+  years_of_experience?: string;
   specialty?: string;
   rating?: number;
   completion_rate?: number; // Porcentaje de asistencia perfecta (ej. 98)

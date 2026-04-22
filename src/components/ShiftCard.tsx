@@ -5,7 +5,8 @@ import { format, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { 
   MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, 
-  UserCircle, ExternalLink, Star, MessageSquare, XCircle, BriefcaseMedical
+  UserCircle, ExternalLink, Star, MessageSquare, XCircle, BriefcaseMedical,
+  ShieldAlert
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -356,27 +357,30 @@ export default function ShiftCard({
             {isMyShift && onWithdraw && !isAssigned && shift.status === 'open' && (
               <div className="mt-1 w-full">
                 {!canWithdraw && (
-                  <p className="text-[10px] text-red-500 text-center mb-1 font-medium italic">
-                    {hoursUntilShift > 0 
-                      ? `No puedes retirar tu postulación faltando menos de 24hs (faltan ${Math.floor(hoursUntilShift)}hs)`
-                      : "La guardia ya ha comenzado"
-                    }
-                  </p>
+                  <div className="bg-red-50 border border-red-100 rounded-lg p-2 mb-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                    <ShieldAlert className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    <p className="text-[10px] text-red-700 font-bold leading-tight">
+                      {hoursUntilShift > 0 
+                        ? `Política ABK: El retiro está bloqueado (faltan menos de 24hs)`
+                        : "La guardia ya ha comenzado"
+                      }
+                    </p>
+                  </div>
                 )}
                 <button 
                   onClick={() => setIsWithdrawModalOpen(true)}
                   disabled={!canWithdraw}
                   className={cn(
-                    "w-full py-2 bg-white border rounded-lg text-sm font-medium transition-colors",
+                    "w-full py-2 bg-white border rounded-lg text-sm font-bold transition-all",
                     canWithdraw 
-                      ? "border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200"
-                      : "border-gray-100 text-gray-400 cursor-not-allowed"
+                      ? "border-red-200 text-red-500 hover:bg-red-50 hover:shadow-sm"
+                      : "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"
                   )}
                 >
                   {canWithdraw 
                     ? 'Retirar postulación' 
                     : hoursUntilShift > 0 
-                      ? `Retiro bloqueado (faltan ${Math.floor(hoursUntilShift)}hs)`
+                      ? `Retiro bloqueado (${Math.floor(hoursUntilShift)}hs)`
                       : 'Retiro bloqueado'
                   }
                 </button>

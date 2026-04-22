@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
-import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert, Calendar, Upload, FileUp, ExternalLink, Trash2, ShieldCheck, Image as ImageIcon, ChevronLeft, MapPin, Stethoscope, Clock, Plus, X } from 'lucide-react';
+import { Save, UserCircle, BriefcaseMedical, Building2, FileText, Phone, Award, ShieldAlert, Calendar, Upload, FileUp, ExternalLink, Trash2, ShieldCheck, Image as ImageIcon, ChevronLeft, MapPin, Stethoscope, Clock, Plus, X, Camera } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -19,6 +19,14 @@ const ZONES = [
   'GBA Norte - San Isidro', 'GBA Norte - Vicente López', 'GBA Norte - Olivos', 'GBA Norte - Martínez', 'GBA Norte - Tigre', 'GBA Norte - Pilar',
   'GBA Sur - Avellaneda', 'GBA Sur - Quilmes', 'GBA Sur - Lomas de Zamora', 'GBA Sur - Lanús', 'GBA Sur - Adrogué',
   'GBA Oeste - Ramos Mejía', 'GBA Oeste - Haedo', 'GBA Oeste - Morón', 'GBA Oeste - Castelar', 'GBA Oeste - San Justo'
+];
+
+const EXPERIENCE_LEVELS = [
+  { value: 'less_than_1', label: 'Menos de 1 año' },
+  { value: '1_to_3', label: '1 a 3 años' },
+  { value: '3_to_5', label: '3 a 5 años' },
+  { value: '5_to_10', label: '5 a 10 años' },
+  { value: 'more_than_10', label: 'Más de 10 años' }
 ];
 
 const SPECIALTIES = [
@@ -43,6 +51,8 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     license_number: user.license_number || '',
     jurisdiction: user.jurisdiction || '',
     specialty: user.specialty || '',
+    secondary_specialties: user.secondary_specialties || [] as string[],
+    years_of_experience: user.years_of_experience || '',
     availability: user.availability || '',
     cv_url: user.cv_url || '',
     license_image_url: user.license_image_url || '',
@@ -69,6 +79,8 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
       license_number: user.license_number || '',
       jurisdiction: user.jurisdiction || '',
       specialty: user.specialty || '',
+      secondary_specialties: user.secondary_specialties || [],
+      years_of_experience: user.years_of_experience || '',
       availability: user.availability || '',
       cv_url: user.cv_url || '',
       license_image_url: user.license_image_url || '',
@@ -106,6 +118,8 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
           license_number: formData.license_number || null,
           jurisdiction: formData.jurisdiction || null,
           specialty: formData.specialty || null,
+          secondary_specialties: formData.secondary_specialties || [],
+          years_of_experience: formData.years_of_experience || null,
           cv_url: formData.cv_url || null,
           license_image_url: formData.license_image_url || null,
           affidavit_accepted: formData.affidavit_accepted,
@@ -162,7 +176,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
 
       const { error: uploadError } = await supabase.storage
         .from('cvs')
-        .upload(filePath, file);
+        .upload(filePath, file, { contentType: file.type, upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -172,9 +186,9 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
 
       setFormData(prev => ({ ...prev, cv_url: publicUrl }));
       toast.success('CV subido correctamente. No olvides guardar los cambios del perfil.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading file:', error);
-      toast.error('Error al subir el archivo');
+      toast.error(`Error al subir el archivo: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -203,22 +217,28 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-license-${Math.random()}.${fileExt}`;
       const filePath = `verifications/${fileName}`;
+      const bucket = file.type === 'application/pdf' ? 'cvs' : 'avatars';
 
       const { error: uploadError } = await supabase.storage
-        .from('cvs') // Reusing cvs bucket for simplicity, or we can suggest creating 'verifications'
-        .upload(filePath, file);
+        .from(bucket)
+        .upload(filePath, file, { contentType: file.type, upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        if (uploadError.message.includes('Bucket not found')) {
+          throw new Error(`El bucket '${bucket}' no existe. Por favor, crealo en el Dashboard de Supabase (Storage -> New Bucket) como público.`);
+        }
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('cvs')
+        .from(bucket)
         .getPublicUrl(filePath);
 
       setFormData(prev => ({ ...prev, license_image_url: publicUrl }));
       toast.success('Captura de matrícula subida correctamente.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading license:', error);
-      toast.error('Error al subir la captura');
+      toast.error(`Error al subir la captura: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -242,36 +262,51 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-logo-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('cvs') // Using common bucket for simplicity
-        .upload(filePath, file);
+        .from('avatars')
+        .upload(filePath, file, { contentType: file.type, upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        if (uploadError.message.includes('Bucket not found')) {
+          throw new Error("El bucket 'avatars' no existe. Por favor, crealo en el Dashboard de Supabase (Storage -> New Bucket) como público.");
+        }
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('cvs')
+        .from('avatars')
         .getPublicUrl(filePath);
 
       setFormData(prev => ({ ...prev, avatar: publicUrl }));
       toast.success('Logo cargado correctamente.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading logo:', error);
-      toast.error('Error al subir el logo');
+      toast.error(`Error al subir el logo: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
   };
 
   const toggleSpecialty = (specialty: string) => {
-    setFormData(prev => {
-      const current = prev.needed_specialties || [];
-      const next = current.includes(specialty)
-        ? current.filter(s => s !== specialty)
-        : [...current, specialty];
-      return { ...prev, needed_specialties: next };
-    });
+    if (user.role === 'clinic') {
+      setFormData(prev => {
+        const current = prev.needed_specialties || [];
+        const next = current.includes(specialty)
+          ? current.filter(s => s !== specialty)
+          : [...current, specialty];
+        return { ...prev, needed_specialties: next };
+      });
+    } else {
+      setFormData(prev => {
+        const current = prev.secondary_specialties || [];
+        const next = current.includes(specialty)
+          ? current.filter(s => s !== specialty)
+          : [...current, specialty];
+        return { ...prev, secondary_specialties: next };
+      });
+    }
   };
 
   return (
@@ -299,8 +334,64 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
           
+          {/* Avatar Section - Top */}
+          <div className="flex flex-col items-center gap-6 pb-8 border-b border-gray-100">
+            <div className="relative group">
+              <div className="w-32 h-32 rounded-3xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden shadow-sm transition-all group-hover:border-blue-400 group-hover:bg-blue-50/10">
+                {formData.avatar ? (
+                  <img src={formData.avatar} alt="Foto de perfil" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-gray-400">
+                    {user.role === 'doctor' ? <Camera className="w-8 h-8" /> : <ImageIcon className="w-8 h-8" />}
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Subir foto</span>
+                  </div>
+                )}
+                
+                {loading && (
+                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                    <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                />
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-full p-2.5 shadow-lg scale-90 group-hover:scale-100 transition-transform">
+                <Upload className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div className="text-center">
+              <h2 className="text-xl font-black text-gray-900">{formData.name || 'Tu Nombre'}</h2>
+              <div className="flex items-center justify-center gap-4 mt-2">
+                {user.role === 'doctor' && (
+                  <>
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-700 rounded-full border border-amber-100 text-xs font-bold">
+                      <Award className="w-3.5 h-3.5" />
+                      {user.rating ? `Rating: ${user.rating.toFixed(1)}` : 'Sin calificación'}
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-xs font-bold">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      {user.completion_rate ? `${user.completion_rate}% asistencia` : 'Nueva cuenta'}
+                    </div>
+                  </>
+                )}
+                {user.role === 'clinic' && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100 text-xs font-bold">
+                    <Building2 className="w-3.5 h-3.5" />
+                    Perfil Institucional
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 border-b border-gray-100 pb-2">
               <UserCircle className="w-5 h-5 text-gray-500" />
@@ -384,6 +475,20 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Años de Experiencia profesional</label>
+                  <select 
+                    name="years_of_experience"
+                    value={formData.years_of_experience}
+                    onChange={handleChange as any}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Seleccionar experto...</option>
+                    {EXPERIENCE_LEVELS.map(level => (
+                      <option key={level.value} value={level.value}>{level.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1"><Award className="w-3.5 h-3.5 text-gray-500" /> Matrícula Nº</label>
                   <input 
                     type="text" 
@@ -419,6 +524,30 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                 </div>
 
                 {/* Nueva Sección: Validación de Matrícula Digital */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+                    <Stethoscope className="w-3.5 h-3.5 text-gray-500" /> Especialidades Secundarias
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {SPECIALTIES.map(spec => (
+                      <button
+                        key={spec}
+                        type="button"
+                        onClick={() => toggleSpecialty(spec)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 border",
+                          formData.secondary_specialties.includes(spec)
+                            ? "bg-blue-600 border-blue-600 text-white shadow-sm" 
+                            : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600"
+                        )}
+                      >
+                        {spec}
+                        {formData.secondary_specialties.includes(spec) ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="md:col-span-2 space-y-4 pt-6 border-t border-gray-100">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5 text-blue-600" />
@@ -467,23 +596,6 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                       </div>
                     </div>
                   )}
-
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mt-4">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        name="affidavit_accepted"
-                        checked={formData.affidavit_accepted}
-                        onChange={handleChange}
-                        required
-                        className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="text-xs text-amber-900 leading-relaxed font-medium">
-                        <strong>Declaración Jurada:</strong> Declaro bajo juramento que los datos aportados en mi perfil y la documentación adjunta son verídicos. 
-                        Entiendo que la falsificación de estos datos puede derivar en la suspensión definitiva de la cuenta y acciones legales correspondientes.
-                      </span>
-                    </label>
-                  </div>
                 </div>
 
                 <div className="md:col-span-2 space-y-3 pt-2">
@@ -535,8 +647,8 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
             ) : (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Logo Section */}
-                  <div className="md:col-span-2">
+                  {/* Logo Section - (Moved to top, hidden legacy code if any) */}
+                  <div className="hidden md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Logo o Imagen de la Institución</label>
                     <div className="flex items-center gap-4">
                       <div className="w-24 h-24 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden relative group">
@@ -715,6 +827,32 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                />
                <p className="text-xs text-gray-500 mt-1">Este texto será clave para que te conozcan en las postulaciones.</p>
             </div>
+
+            {user.role === 'doctor' && !user.affidavit_accepted && (
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    name="affidavit_accepted"
+                    checked={formData.affidavit_accepted}
+                    onChange={handleChange}
+                    required
+                    className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <span className="text-xs text-amber-900 leading-relaxed font-medium">
+                    <strong>Declaración Jurada:</strong> Declaro bajo juramento que los datos aportados en mi perfil y la documentación adjunta son verídicos. 
+                    Entiendo que la falsificación de estos datos puede derivar en la suspensión definitiva de la cuenta y acciones legales correspondientes.
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {user.role === 'doctor' && user.affidavit_accepted && (
+              <div className="flex items-center gap-2 text-xs text-green-600 font-semibold px-1 mt-4">
+                <ShieldCheck className="w-4 h-4" />
+                Declaración jurada aceptada el {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'con éxito'}
+              </div>
+            )}
           </div>
 
           <div className="pt-6 border-t border-gray-200 flex items-center justify-between">
