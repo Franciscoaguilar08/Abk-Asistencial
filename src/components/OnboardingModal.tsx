@@ -21,7 +21,8 @@ const SPECIALTIES = [
   'Neurología', 'Oftalmología', 'Otorrinolaringología', 'Urología', 'Gastroenterología', 
   'Endocrinología', 'Reumatología', 'Infectología', 'Hematología', 'Oncología', 
   'Nefrología', 'Neumonología', 'Cirugía General', 'Anestesiología', 'Medicina General', 
-  'Emergentología', 'Diagnóstico por Imágenes', 'Kinesiología', 'Nutrición'
+  'Emergentología', 'Diagnóstico por Imágenes', 'Kinesiología', 'Nutrición',
+  'Bioquímica', 'Psicología', 'Odontología', 'Fonoaudiología'
 ];
 
 interface OnboardingModalProps {

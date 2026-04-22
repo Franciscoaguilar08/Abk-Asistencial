@@ -18,10 +18,10 @@ const ROLES = [
   "enfermeros",
   "kinesiólogos",
   "odontólogos",
-  "paramédicos",
+  "bioquímicos",
   "psicólogos",
-  "técnicos",
-  "administrativos"
+  "nutricionistas",
+  "fonoaudiólogos"
 ];
 
 function TypewriterEffect() {
