@@ -6,13 +6,12 @@ import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
 const ZONES = [
-  'Palermo, CABA', 'Belgrano, CABA', 'Recoleta, CABA', 'Caballito, CABA', 'Almagro, CABA', 
-  'Villa Urquiza, CABA', 'Villa Devoto, CABA', 'Flores, CABA', 'San Telmo, CABA', 'Puerto Madero, CABA',
-  'Villa Crespo, CABA', 'Colegiales, CABA', 'Chacarita, CABA', 'Retiro, CABA', 'Barracas, CABA',
-  'Paternal, CABA', 'Saavedra, CABA', 'Núñez, CABA', 
-  'GBA Norte - San Isidro', 'GBA Norte - Vicente López', 'GBA Norte - Olivos', 'GBA Norte - Martínez', 'GBA Norte - Tigre', 'GBA Norte - Pilar',
-  'GBA Sur - Avellaneda', 'GBA Sur - Quilmes', 'GBA Sur - Lomas de Zamora', 'GBA Sur - Lanús', 'GBA Sur - Adrogué',
-  'GBA Oeste - Ramos Mejía', 'GBA Oeste - Haedo', 'GBA Oeste - Morón', 'GBA Oeste - Castelar', 'GBA Oeste - San Justo'
+  'Capital Federal - Norte', 'Capital Federal - Sur', 'Capital Federal - Oeste', 'Capital Federal - Centro',
+  'GBA Norte', 'GBA Sur', 'GBA Oeste', 
+  'Buenos Aires Provincia', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 
+  'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 
+  'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 
+  'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'
 ];
 
 const SPECIALTIES = [
@@ -22,7 +21,8 @@ const SPECIALTIES = [
   'Endocrinología', 'Reumatología', 'Infectología', 'Hematología', 'Oncología', 
   'Nefrología', 'Neumonología', 'Cirugía General', 'Anestesiología', 'Medicina General', 
   'Emergentología', 'Diagnóstico por Imágenes', 'Kinesiología', 'Nutrición',
-  'Bioquímica', 'Psicología', 'Odontología', 'Fonoaudiología', 'Otro'
+  'Bioquímica', 'Psicología', 'Odontología', 'Fonoaudiología', 
+  'Ambulancia - Traslados (Baja)', 'Ambulancia - UTIM (Alta)', 'Ambulancia - Eventos', 'Otro'
 ];
 
 interface OnboardingModalProps {
@@ -40,6 +40,7 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
     license_number: '',
     jurisdiction: '',
     specialty: '',
+    vehicle_license_plate: '',
     availability: '',
     cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
     no_cuit: user.cuit === 'N/A',
@@ -89,6 +90,7 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
         updatePayload.license_number = formData.license_number || null;
         updatePayload.jurisdiction = formData.jurisdiction || null;
         updatePayload.specialty = formData.specialty || null;
+        updatePayload.vehicle_license_plate = formData.vehicle_license_plate || null;
         updatePayload.availability = formData.availability || null;
         updatePayload.affidavit_accepted = formData.affidavit_accepted;
       } else {
@@ -279,10 +281,54 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
                         <input required type="number" name="dni" value={formData.dni} onChange={handleChange} className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" />
                       </div>
                       <div>
-                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Especialidad</label>
-                        <input required type="text" name="specialty" value={formData.specialty} onChange={handleChange} placeholder="Ej: Clínica Médica" className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" />
+                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Especialidad Principal *</label>
+                        <input 
+                          required 
+                          type="text" 
+                          name="specialty" 
+                          value={formData.specialty} 
+                          onChange={handleChange} 
+                          placeholder="Ej: Clínica Médica, Pediatría..." 
+                          className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" 
+                        />
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {['Clínica Médica', 'Pediatría', 'Enfermería', 'Ambulancia - Traslados (Baja)', 'Ambulancia - UTIM (Alta)'].map(s => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, specialty: s }))}
+                              className={cn(
+                                "px-3 py-1 rounded-full text-[10px] font-bold border transition-all",
+                                formData.specialty === s 
+                                  ? "bg-blue-600 border-blue-600 text-white shadow-sm" 
+                                  : "bg-gray-50 border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600"
+                              )}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
+
+                    {formData.specialty.toLowerCase().includes('ambulancia') && (
+                      <div className="animate-in slide-in-from-top-2 duration-300">
+                        <label className="block text-xs font-black text-blue-600 uppercase tracking-widest mb-1.5 ml-1 flex items-center gap-2">
+                          <Award className="w-3.5 h-3.5" />
+                          Patente del Vehículo / Matrícula del Móvil *
+                        </label>
+                        <input 
+                          required 
+                          type="text" 
+                          name="vehicle_license_plate" 
+                          value={formData.vehicle_license_plate} 
+                          onChange={handleChange} 
+                          placeholder="Ej: AE 123 CD" 
+                          className="w-full px-5 py-4 bg-blue-50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all shadow-sm font-bold uppercase" 
+                        />
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Matrícula (Nº)</label>

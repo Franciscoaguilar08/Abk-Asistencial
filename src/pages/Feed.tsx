@@ -395,6 +395,7 @@ export default function Feed({ user }: FeedProps) {
             <option value="evento">Evento</option>
             <option value="empleo">Empleo</option>
             <option value="suplencia">Suplencia</option>
+            <option value="traslado">Traslado</option>
           </select>
         </div>
       </div>

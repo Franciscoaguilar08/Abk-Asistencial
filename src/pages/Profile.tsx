@@ -12,13 +12,12 @@ interface ProfileProps {
 }
 
 const ZONES = [
-  'Palermo, CABA', 'Belgrano, CABA', 'Recoleta, CABA', 'Caballito, CABA', 'Almagro, CABA', 
-  'Villa Urquiza, CABA', 'Villa Devoto, CABA', 'Flores, CABA', 'San Telmo, CABA', 'Puerto Madero, CABA',
-  'Villa Crespo, CABA', 'Colegiales, CABA', 'Chacarita, CABA', 'Retiro, CABA', 'Barracas, CABA',
-  'Paternal, CABA', 'Saavedra, CABA', 'Núñez, CABA', 'Saavedra, CABA',
-  'GBA Norte - San Isidro', 'GBA Norte - Vicente López', 'GBA Norte - Olivos', 'GBA Norte - Martínez', 'GBA Norte - Tigre', 'GBA Norte - Pilar',
-  'GBA Sur - Avellaneda', 'GBA Sur - Quilmes', 'GBA Sur - Lomas de Zamora', 'GBA Sur - Lanús', 'GBA Sur - Adrogué',
-  'GBA Oeste - Ramos Mejía', 'GBA Oeste - Haedo', 'GBA Oeste - Morón', 'GBA Oeste - Castelar', 'GBA Oeste - San Justo'
+  'Capital Federal - Norte', 'Capital Federal - Sur', 'Capital Federal - Oeste', 'Capital Federal - Centro',
+  'GBA Norte', 'GBA Sur', 'GBA Oeste', 
+  'Buenos Aires Provincia', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 
+  'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 
+  'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 
+  'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'
 ];
 
 const EXPERIENCE_LEVELS = [
@@ -36,7 +35,8 @@ const SPECIALTIES = [
   'Endocrinología', 'Reumatología', 'Infectología', 'Hematología', 'Oncología', 
   'Nefrología', 'Neumonología', 'Cirugía General', 'Anestesiología', 'Medicina General', 
   'Emergentología', 'Diagnóstico por Imágenes', 'Kinesiología', 'Nutrición',
-  'Bioquímica', 'Psicología', 'Odontología', 'Fonoaudiología', 'Otro'
+  'Bioquímica', 'Psicología', 'Odontología', 'Fonoaudiología', 
+  'Ambulancia - Traslados (Baja)', 'Ambulancia - UTIM (Alta)', 'Ambulancia - Eventos', 'Otro'
 ];
 
 export default function Profile({ user, onProfileUpdate }: ProfileProps) {
@@ -57,6 +57,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
     availability: user.availability || '',
     cv_url: user.cv_url || '',
     license_image_url: user.license_image_url || '',
+    vehicle_license_plate: user.vehicle_license_plate || '',
     affidavit_accepted: user.affidavit_accepted || false,
     // Clinic
     cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
@@ -85,6 +86,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
       availability: user.availability || '',
       cv_url: user.cv_url || '',
       license_image_url: user.license_image_url || '',
+      vehicle_license_plate: user.vehicle_license_plate || '',
       affidavit_accepted: user.affidavit_accepted || false,
       cuit: user.cuit === 'N/A' ? '' : (user.cuit || ''),
       no_cuit: user.cuit === 'N/A',
@@ -123,6 +125,7 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
           years_of_experience: formData.years_of_experience || null,
           cv_url: formData.cv_url || null,
           license_image_url: formData.license_image_url || null,
+          vehicle_license_plate: formData.vehicle_license_plate || null,
         } : {
           cuit: formData.no_cuit ? 'N/A' : (formData.cuit || null),
           address: formData.address || null,
@@ -464,7 +467,41 @@ export default function Profile({ user, onProfileUpdate }: ProfileProps) {
                     placeholder="Ej: Pediatría, Med. General"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
                   />
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {['Clínica Médica', 'Pediatría', 'Enfermería', 'Ambulancia - Traslados (Baja)', 'Ambulancia - UTIM (Alta)'].map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, specialty: s }))}
+                        className={cn(
+                          "px-2 py-0.5 rounded-full text-[10px] font-bold border transition-all",
+                          formData.specialty === s 
+                            ? "bg-blue-600 border-blue-600 text-white shadow-sm" 
+                            : "bg-gray-50 border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                {formData.specialty.toLowerCase().includes('ambulancia') && (
+                  <div className="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-200 animate-in slide-in-from-top-2">
+                    <label className="block text-sm font-bold text-blue-800 mb-1 flex items-center gap-2">
+                      <Award className="w-4 h-4" />
+                      Patente del Vehículo / Matrícula del Móvil *
+                    </label>
+                    <input 
+                      type="text" 
+                      name="vehicle_license_plate" 
+                      value={formData.vehicle_license_plate} 
+                      onChange={handleChange}
+                      placeholder="Ej: AE 123 CD"
+                      className="w-full px-3 py-2 border border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-bold uppercase" 
+                    />
+                    <p className="text-[10px] text-blue-600 mt-1 font-medium italic">Requerido para la validación de servicios de traslado y emergencia.</p>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">DNI</label>
                   <input 

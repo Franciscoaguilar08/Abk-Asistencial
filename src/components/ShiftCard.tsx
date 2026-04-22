@@ -135,6 +135,7 @@ export default function ShiftCard({
         shift.category === 'evento' ? "hover:border-purple-300 hover:shadow-purple-50" : 
         shift.category === 'empleo' ? "hover:border-green-300 hover:shadow-green-50" :
         shift.category === 'suplencia' ? "hover:border-orange-300 hover:shadow-orange-50" :
+        shift.category === 'traslado' ? "hover:border-amber-300 hover:shadow-amber-50" :
         "hover:border-blue-300 hover:shadow-blue-50"
       )}>
       <div className="p-5 flex-1 space-y-4">
@@ -146,11 +147,13 @@ export default function ShiftCard({
                 shift.category === 'evento' ? "bg-purple-100 text-purple-700" : 
                 shift.category === 'empleo' ? "bg-green-100 text-green-700" :
                 shift.category === 'suplencia' ? "bg-orange-100 text-orange-700" :
+                shift.category === 'traslado' ? "bg-amber-100 text-amber-700" :
                 "bg-blue-100 text-blue-700"
               )}>
                 {shift.category === 'evento' ? 'Evento' : 
                  shift.category === 'empleo' ? 'Empleo' :
                  shift.category === 'suplencia' ? 'Suplencia' :
+                 shift.category === 'traslado' ? 'Traslado' :
                  'Guardia Clínica'}
               </span>
               {shift.job_duration && (

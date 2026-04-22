@@ -20,7 +20,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
   const [viewedProfileData, setViewedProfileData] = useState<User | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<'guardia' | 'evento' | 'empleo' | 'suplencia'>('guardia');
+  const [selectedCategory, setSelectedCategory] = useState<'guardia' | 'evento' | 'empleo' | 'suplencia' | 'traslado'>('guardia');
 
   const fetchProfileData = async (userId: string) => {
     try {
@@ -446,6 +446,13 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                       <input type="radio" name="category" value="suplencia" checked={selectedCategory === 'suplencia'} onChange={() => setSelectedCategory('suplencia')} className="sr-only" />
                       <span>Suplencia</span>
                     </label>
+                    <label className={cn(
+                      "flex items-center justify-center gap-2 p-2 border rounded-lg cursor-pointer transition-all",
+                      selectedCategory === 'traslado' ? "border-red-600 bg-red-50 text-red-700 font-bold" : "border-gray-200 hover:bg-gray-50"
+                    )}>
+                      <input type="radio" name="category" value="traslado" checked={selectedCategory === 'traslado'} onChange={() => setSelectedCategory('traslado')} className="sr-only" />
+                      <span>Traslado</span>
+                    </label>
                   </div>
                 </div>
 
@@ -667,11 +674,13 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
                   shift.category === 'evento' ? "bg-purple-100 text-purple-700" : 
                   shift.category === 'empleo' ? "bg-green-100 text-green-700" :
                   shift.category === 'suplencia' ? "bg-orange-100 text-orange-700" :
+                  shift.category === 'traslado' ? "bg-amber-100 text-amber-700" :
                   "bg-gray-100 text-gray-700"
                 )}>
                   {shift.category === 'evento' ? 'Evento' : 
                    shift.category === 'empleo' ? 'Empleo' :
                    shift.category === 'suplencia' ? 'Suplencia' :
+                   shift.category === 'traslado' ? 'Traslado' :
                    'Guardia'}
                 </span>
                 {shift.job_duration && (

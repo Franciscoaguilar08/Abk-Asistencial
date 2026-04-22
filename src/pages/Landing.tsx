@@ -16,6 +16,7 @@ interface LandingProps {
 const ROLES = [
   "médicos",
   "enfermeros",
+  "ambulancias",
   "kinesiólogos",
   "odontólogos",
   "bioquímicos",
@@ -369,7 +370,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             >
               <p className="uppercase tracking-widest text-[10px] font-bold text-gray-400">Perfecto para coberturas en:</p>
               <div className="flex flex-wrap justify-center gap-2 max-w-2xl px-4">
-                {['Clínicas', 'Sanatorios', 'Maratones', 'Torneos de Fútbol', 'Recitales', 'Eventos Deportivos', 'Centros Médicos'].map((item) => (
+                {['Clínicas', 'Sanatorios', 'Ambulancias', 'Maratones', 'Torneos de Fútbol', 'Recitales', 'Eventos Deportivos', 'Centros Médicos'].map((item) => (
                   <span key={item} className="px-3 py-1 bg-white text-gray-600 rounded-full border border-gray-200 shadow-sm hover:border-blue-200 hover:text-blue-600 transition-colors">
                     {item}
                   </span>

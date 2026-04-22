@@ -12,6 +12,7 @@ export interface User {
   dni?: string; // Para profesionales
   license_number?: string; // Matrícula
   license_image_url?: string; // Captura de Mi Argentina
+  vehicle_license_plate?: string; // Patente del vehículo (para ambulancias)
   jurisdiction?: string; // Jurisdicción de la matrícula
   affidavit_accepted?: boolean; // Declaración jurada aceptada
   cuit?: string; // Para instituciones
@@ -42,7 +43,7 @@ export interface Shift {
   clinic_id: string;
   clinic_name: string;
   clinic_avatar?: string;
-  category: 'guardia' | 'evento' | 'empleo' | 'suplencia';
+  category: 'guardia' | 'evento' | 'empleo' | 'suplencia' | 'traslado';
   job_duration?: 'tiempo_completo' | 'semanal' | 'mensual' | '3_meses' | 'otro';
   type: string; // e.g., 'Guardia 24hs', 'Cobertura de Torneo'
   specialty: string; // e.g., 'Pediatría', 'Clínica Médica', 'Terapia Intensiva'
