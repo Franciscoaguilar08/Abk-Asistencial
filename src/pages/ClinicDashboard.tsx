@@ -341,6 +341,21 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
         </button>
       </div>
 
+      {user.verification_status !== 'verified' && (
+        <div className="bg-purple-50 border border-purple-100 rounded-2xl p-6 flex items-start gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+            <Clock className="w-6 h-6 text-purple-600" />
+          </div>
+          <div>
+            <h3 className="font-black text-purple-900 text-lg">Perfil Institucional en Revisión</h3>
+            <p className="text-purple-700 mt-0.5 font-medium leading-relaxed">
+              Estamos validando la información de tu institución. Podés publicar oportunidades, 
+              pero para asignar profesionales y concretar coberturas necesitamos completar tu certificación ABK.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         <div className="grid gap-6">
           {shifts.length > 0 ? (

@@ -81,7 +81,7 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
         bio: formData.bio || null,
         linkedin_url: formData.linkedin_url || null,
         avatar: formData.avatar || null,
-        verification_status: 'verified', // Auto-verify in Beta Phase for now
+        verification_status: 'pending', // Set to pending for admin verification
       };
 
       if (user.role === 'doctor') {

@@ -10,6 +10,7 @@ import {
   Building2, Star, TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '../lib/utils';
 
 interface AdminDashboardProps {
   currentUser: User | null;
@@ -78,16 +79,20 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
         .eq('id', userId);
       if (error) throw error;
 
+      // Send "Email" Notification (Foundation for future Edge Function/SendGrid integration)
+      // In production, this would trigger an email via a Supabase Edge Function or Webhook.
       const user = users.find(u => u.id === userId);
       if (user) {
         await supabase.from('notifications').insert({
           user_id: userId,
           title: action === 'verified' ? '¡Cuenta verificada!' : 'Verificación rechazada',
           message: action === 'verified'
-            ? 'Tu cuenta fue verificada. Ya podés operar en la red ABK Asistencial.'
-            : 'Tu solicitud de verificación fue rechazada. Contactanos para más información.',
+            ? 'Tu cuenta fue verificada correctamente. Ya podés empezar a postularte y operar en la red ABK Asistencial.'
+            : 'Tu solicitud de verificación fue rechazada por inconsistencias en la documentación. Por favor, revisá tu perfil.',
           type: 'system',
         });
+        
+        console.log(`[Email Mock] Sending email to ${user.email}: Status ${action}`);
       }
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, verification_status: action } : u));
@@ -307,54 +312,102 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
       )}
 
       {activeTab === 'users' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-100">
+        <div className="space-y-3">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Todos los usuarios ({users.length})</span>
+            <p className="text-[10px] text-gray-400">Click en el usuario para ver detalles y documentos</p>
           </div>
-          <div className="divide-y divide-gray-50">
+          <div className="space-y-2">
             {users.map(u => (
-              <div key={u.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${u.role === 'doctor' ? 'bg-blue-500' : 'bg-purple-500'}`}>
-                    {u.name?.charAt(0) || '?'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{u.name || 'Sin nombre'}</p>
-                    <p className="text-xs text-gray-400">{u.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {u.role === 'doctor' && u.specialty && (
-                    <span className="text-xs text-gray-400">{u.specialty}</span>
-                  )}
-                  <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
-                    u.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
-                    u.verification_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                    u.verification_status === 'rejected' ? 'bg-red-100 text-red-700' :
-                    'bg-gray-100 text-gray-500'
-                  }`}>
-                    {u.verification_status === 'verified' ? 'Verificado' :
-                     u.verification_status === 'pending' ? 'Pendiente' :
-                     u.verification_status === 'rejected' ? 'Rechazado' : 'Sin verificar'}
-                  </span>
-                  {u.verification_status === 'pending' && (
-                    <div className="flex gap-1">
-                      <button onClick={() => handleVerify(u.id, 'verified')} className="p-1 rounded hover:bg-green-100 text-green-600" title="Aprobar">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleVerify(u.id, 'rejected')} className="p-1 rounded hover:bg-red-100 text-red-600" title="Rechazar">
-                        <XCircle className="w-4 h-4" />
-                      </button>
+              <div key={u.id} className={cn(
+                "bg-white border rounded-xl overflow-hidden transition-all",
+                expandedUser === u.id ? "border-blue-200 ring-1 ring-blue-50 shadow-sm" : "border-gray-100"
+              )}>
+                <div 
+                  className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-gray-50"
+                  onClick={() => setExpandedUser(expandedUser === u.id ? null : u.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${u.role === 'doctor' ? 'bg-blue-500' : 'bg-purple-500'}`}>
+                      {u.name?.charAt(0) || '?'}
                     </div>
-                  )}
-                  <button 
-                    onClick={() => handleDeleteUser(u.id)}
-                    className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
-                    title="Eliminar usuario definitivamente"
-                  >
-                    <XCircle className="w-4 h-4" />
-                  </button>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{u.name || 'Sin nombre'}</p>
+                      <p className="text-xs text-gray-400">{u.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                      u.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
+                      u.verification_status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                      u.verification_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {u.verification_status === 'verified' ? 'Verificado' :
+                       u.verification_status === 'pending' ? 'Pendiente' :
+                       u.verification_status === 'rejected' ? 'Rechazado' : 'Sin verificar'}
+                    </span>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id); }}
+                      className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+                      title="Eliminar usuario definitivamente"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                    {expandedUser === u.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  </div>
                 </div>
+
+                {expandedUser === u.id && (
+                  <div className="border-t border-gray-100 p-4 bg-gray-50/50">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-4 text-sm">
+                      {u.role === 'doctor' ? (
+                        <>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">DNI</p><p className="font-medium">{u.dni || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">Matrícula</p><p className="font-medium">{u.license_number || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">Jurisdicción</p><p className="font-medium">{u.jurisdiction || '—'}</p></div>
+                          <div className="col-span-1">
+                             <p className="text-gray-400 text-xs mb-1 font-bold italic">Documentación</p>
+                             {u.license_image_url ? (
+                               <a href={u.license_image_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-md text-[10px] font-black hover:bg-blue-700 transition-colors shadow-sm">
+                                 <Eye className="w-3.5 h-3.5" /> VER MATRÍCULA
+                               </a>
+                             ) : (
+                               <span className="text-[10px] text-red-500 font-bold italic uppercase">Matrícula no cargada</span>
+                             )}
+                          </div>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">Especialidad</p><p className="font-medium">{u.specialty || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">Socio ABK</p><p className="font-medium text-blue-600">{u.affidavit_accepted ? 'SÍ (DJ)' : 'NO'}</p></div>
+                        </>
+                      ) : (
+                        <>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">CUIT</p><p className="font-medium">{u.cuit || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">Dirección</p><p className="font-medium">{u.address || '—'}</p></div>
+                          <div><p className="text-gray-400 text-xs mb-1 font-bold">Tipo</p><p className="font-medium">{u.institution_type || '—'}</p></div>
+                        </>
+                      )}
+                      <div><p className="text-gray-400 text-xs mb-1 font-bold">Teléfono</p><p className="font-medium">{u.phone || '—'}</p></div>
+                      <div><p className="text-gray-400 text-xs mb-1 font-bold">Registrado</p><p className="font-medium">{u.created_at ? format(new Date(u.created_at), "dd/MM/yyyy", { locale: es }) : '—'}</p></div>
+                    </div>
+                    
+                    {u.verification_status !== 'verified' && (
+                      <div className="flex gap-2 pt-2 border-t border-gray-100">
+                        <button
+                          onClick={() => handleVerify(u.id, 'verified')}
+                          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all"
+                        >
+                          <CheckCircle2 className="w-4 h-4" /> Aprobar Usuario
+                        </button>
+                        <button
+                          onClick={() => handleVerify(u.id, 'rejected')}
+                          className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-xs font-bold transition-all"
+                        >
+                          <XCircle className="w-4 h-4" /> Rechazar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
