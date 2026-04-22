@@ -57,11 +57,12 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
     if (!confirm('¿Seguro que querés eliminar este usuario? Se borrarán todos sus datos permanentemente.')) return;
     
     try {
-      // Note: Ideally this would be a Postgres function or handled via cascade delete in DB
-      // For now, we delete from the public.users table. 
-      // If there are Auth users, they remain in Supabase Auth unless deleted via Admin API.
-      const { error } = await supabase.from('users').delete().eq('id', userId);
+      const { data, error } = await supabase.from('users').delete().eq('id', userId).select();
       if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        throw new Error('No se pudo eliminar el usuario. Verificá los permisos de RLS en Supabase.');
+      }
       
       setUsers(prev => prev.filter(u => u.id !== userId));
       toast.success('Usuario eliminado permanentemente');
@@ -73,11 +74,17 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
 
   const handleVerify = async (userId: string, action: 'verified' | 'rejected') => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ verification_status: action })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
+
       if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        throw new Error('No se pudo actualizar el usuario. Verificá los permisos de RLS en Supabase.');
+      }
 
       // Send "Email" Notification (Foundation for future Edge Function/SendGrid integration)
       // In production, this would trigger an email via a Supabase Edge Function or Webhook.
@@ -105,12 +112,17 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const handleDeleteShift = async (shiftId: string) => {
     if (!confirm('¿Seguro que querés eliminar esta guardia?')) return;
     try {
-      const { error } = await supabase.from('shifts').delete().eq('id', shiftId);
+      const { data, error } = await supabase.from('shifts').delete().eq('id', shiftId).select();
       if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error('No se pudo eliminar la guardia. Verificá los permisos de RLS en Supabase.');
+      }
+
       setShifts(prev => prev.filter(s => s.id !== shiftId));
       toast.success('Guardia eliminada');
-    } catch {
-      toast.error('Error al eliminar');
+    } catch (error: any) {
+      toast.error(error.message || 'Error al eliminar');
     }
   };
 

@@ -22,6 +22,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS institution_type TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS zone TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS needed_specialties TEXT[];
 ALTER TABLE users ADD COLUMN IF NOT EXISTS contact_hours TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status TEXT DEFAULT 'unverified';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS secondary_specialties TEXT[];
+ALTER TABLE users ADD COLUMN IF NOT EXISTS years_of_experience TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS rating NUMERIC DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS completion_rate NUMERIC;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS penalty_rate NUMERIC;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cv_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vehicle_license_plate TEXT;
 
 -- Permite lectura pública de perfiles
 CREATE POLICY "Public profiles are viewable by authenticated users" 
@@ -38,6 +46,22 @@ WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update their own profile" 
 ON users FOR UPDATE 
 USING (auth.uid() = id);
+
+-- POLÍTICAS PARA ADMINISTRADOR (franciscoaguilar008@gmail.com)
+CREATE POLICY "Admins can select all users"
+ON users FOR SELECT
+TO authenticated
+USING (auth.jwt() ->> 'email' = 'franciscoaguilar008@gmail.com');
+
+CREATE POLICY "Admins can update all users"
+ON users FOR UPDATE
+TO authenticated
+USING (auth.jwt() ->> 'email' = 'franciscoaguilar008@gmail.com');
+
+CREATE POLICY "Admins can delete users"
+ON users FOR DELETE
+TO authenticated
+USING (auth.jwt() ->> 'email' = 'franciscoaguilar008@gmail.com');
 
 
 -- 2. Tabla: shifts
@@ -74,7 +98,14 @@ USING (
   (status = 'open' AND EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'doctor'))
   OR
   auth.uid() = assigned_doctor_id
+  OR
+  auth.jwt() ->> 'email' = 'franciscoaguilar008@gmail.com'
 );
+
+CREATE POLICY "Admins can delete shifts"
+ON shifts FOR DELETE
+TO authenticated
+USING (auth.jwt() ->> 'email' = 'franciscoaguilar008@gmail.com');
 
 
 -- 3. Tabla: notifications
