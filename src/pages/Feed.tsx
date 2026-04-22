@@ -272,6 +272,16 @@ export default function Feed({ user }: FeedProps) {
         .eq('id', shiftId);
 
       if (error) throw error;
+      
+      // Notify clinic that doctor confirmed
+      await supabase.from('notifications').insert({
+        user_id: shift.clinic_id,
+        title: 'Postulación Confirmada',
+        message: `El Dr. ${user.name} ha confirmado su interés oficial en tu guardia de ${shift.specialty}. Ya podés asignarle la cobertura.`,
+        type: 'application',
+        shift_id: shiftId
+      });
+
       toast.success('¡Postulación confirmada oficialmente!');
       fetchShifts();
     } catch (error: any) {

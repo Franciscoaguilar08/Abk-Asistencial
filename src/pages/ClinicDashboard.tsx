@@ -250,6 +250,17 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
 
       if (error) throw error;
 
+      // Notify doctor if shift was confirmed
+      if (isConfirmed && shift.assigned_doctor_id) {
+        await supabase.from('notifications').insert({
+          user_id: shift.assigned_doctor_id,
+          title: 'Guardia Cancelada',
+          message: `${user.name} ha cancelado la guardia de ${shift.specialty} a la que te habías comprometido. Tu historial no será afectado.`,
+          type: 'shift_status',
+          shift_id: shiftId
+        });
+      }
+
       // Si estaba confirmada, penalizar a la clínica (incremetar contador de cancelaciones)
       if (isConfirmed) {
         const currentCount = user.cancellation_count || 0;
@@ -318,7 +329,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 italic transition-all hover:shadow-md">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Publicaciones</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Oportunidades</h1>
           <p className="text-gray-500 mt-1">Gestioná tus búsquedas y asignaciones.</p>
         </div>
         <button 
@@ -326,7 +337,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
           className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-100 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
         >
           <Plus className="w-5 h-5" />
-          Nueva Publicación
+          Nueva Oportunidad
         </button>
       </div>
 

@@ -48,6 +48,28 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (userId === currentUser?.id) {
+      toast.error('No puedes eliminar tu propia cuenta de administrador');
+      return;
+    }
+    if (!confirm('¿Seguro que querés eliminar este usuario? Se borrarán todos sus datos permanentemente.')) return;
+    
+    try {
+      // Note: Ideally this would be a Postgres function or handled via cascade delete in DB
+      // For now, we delete from the public.users table. 
+      // If there are Auth users, they remain in Supabase Auth unless deleted via Admin API.
+      const { error } = await supabase.from('users').delete().eq('id', userId);
+      if (error) throw error;
+      
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      toast.success('Usuario eliminado permanentemente');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('No se pudo eliminar el usuario');
+    }
+  };
+
   const handleVerify = async (userId: string, action: 'verified' | 'rejected') => {
     try {
       const { error } = await supabase
@@ -267,6 +289,14 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                         <XCircle className="w-4 h-4" />
                         Rechazar
                       </button>
+                      <button
+                        onClick={() => handleDeleteUser(u.id)}
+                        className="flex items-center gap-2 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-600 px-5 py-2 rounded-lg text-sm font-semibold transition-colors ml-auto"
+                        title="Borrar definitivamente"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Borrar
+                      </button>
                     </div>
                   </div>
                 )}
@@ -317,6 +347,13 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
                       </button>
                     </div>
                   )}
+                  <button 
+                    onClick={() => handleDeleteUser(u.id)}
+                    className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600 transition-colors"
+                    title="Eliminar usuario definitivamente"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}

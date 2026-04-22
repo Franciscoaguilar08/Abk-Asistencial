@@ -53,6 +53,8 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadMessagesCount = notifications.filter(n => n.type === 'message' && !n.read).length;
+  const unreadGeneralCount = notifications.filter(n => n.type !== 'message' && !n.read).length;
 
   const markAsRead = async () => {
     if (!currentUser || unreadCount === 0) return;
@@ -64,6 +66,20 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
       .from('notifications')
       .update({ read: true })
       .eq('user_id', currentUser.id)
+      .eq('read', false);
+  };
+
+  const markMessagesAsRead = async () => {
+    if (!currentUser || unreadMessagesCount === 0) return;
+    
+    // Optimistic UI update
+    setNotifications(prev => prev.map(n => n.type === 'message' ? { ...n, read: true } : n));
+
+    await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('user_id', currentUser.id)
+      .eq('type', 'message')
       .eq('read', false);
   };
 
@@ -84,11 +100,11 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                 </Link>
                 {currentUser.role === 'doctor' ? (
                   <Link to="/doctor" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
-                    Mis Coberturas
+                    Mis Postulaciones
                   </Link>
                 ) : (
                   <Link to="/clinic" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
-                    Mis Publicaciones
+                    Mis Oportunidades
                   </Link>
                 )}
                 <Link to="/profile" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
@@ -104,6 +120,7 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
               <div className="flex items-center gap-1">
                 <Link 
                   to="/inbox"
+                  onClick={markMessagesAsRead}
                   className={cn(
                     "p-2 rounded-full transition-colors relative",
                     location.pathname === '/inbox' ? "text-blue-600 bg-blue-50" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
@@ -111,6 +128,14 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                   title="Mensajes"
                 >
                   <MessageSquare className="w-5 h-5" />
+                  {unreadMessagesCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-600 text-[10px] items-center justify-center text-white font-bold leading-none">
+                        {unreadMessagesCount}
+                      </span>
+                    </span>
+                  )}
                 </Link>
 
                 <div className="relative">
@@ -122,8 +147,8 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative"
                   >
                     <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                    {unreadGeneralCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
                     )}
                   </button>
                   

@@ -84,7 +84,7 @@ export interface AppNotification {
   user_id: string;
   title: string;
   message: string;
-  type: 'application' | 'assignment' | 'system';
+  type: 'application' | 'assignment' | 'system' | 'message' | 'shift_status';
   read: boolean;
   shift_id?: string;
   created_at: string;

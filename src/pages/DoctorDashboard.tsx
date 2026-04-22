@@ -163,6 +163,16 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         .eq('id', shiftId);
 
       if (error) throw error;
+      
+      // Notify clinic that doctor confirmed
+      await supabase.from('notifications').insert({
+        user_id: shift.clinic_id,
+        title: 'Postulación Confirmada',
+        message: `El Dr. ${user.name} ha confirmado su interés oficial en tu guardia de ${shift.specialty}. Ya podés asignarle la cobertura.`,
+        type: 'application',
+        shift_id: shiftId
+      });
+
       toast.success('¡Postulación confirmada oficialmente!');
       fetchShifts();
     } catch (error: any) {
@@ -179,7 +189,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
     <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mis Coberturas</h1>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mis Postulaciones</h1>
           <p className="text-gray-500 mt-1 font-medium">Hacé el seguimiento de tus postulaciones y guardias asignadas.</p>
         </div>
         <div className="bg-blue-50 px-4 py-2 rounded-2xl flex items-center gap-2">

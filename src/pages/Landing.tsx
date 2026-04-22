@@ -1,4 +1,8 @@
-import { Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, Check, XCircle } from 'lucide-react';
+import { 
+  Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, 
+  MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, 
+  Check, XCircle, Eye, EyeOff 
+} from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
@@ -63,6 +67,17 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Password validation checks
+  const passwordRequirements = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[@$!%*?&]/.test(password),
+  };
+
+  const isPasswordValid = Object.values(passwordRequirements).every(v => v);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -721,9 +736,46 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Contraseña</label>
-                      <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder={mode === 'register' ? "Crea una contraseña segura" : "Tu contraseña"} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" />
+                      <div className="relative">
+                        <input 
+                          type={showPassword ? "text" : "password"} 
+                          required 
+                          value={password} 
+                          onChange={(e) => setPassword(e.target.value)} 
+                          placeholder={mode === 'register' ? "Crea una contraseña segura" : "Tu contraseña"} 
+                          className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow" 
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      
                       {mode === 'register' && (
-                        <p className="text-[11px] text-gray-500 mt-2 px-1 leading-tight">Mínimo 8 caracteres, 1 mayúscula, 1 número y 1 símbolo (@$!%*?&).</p>
+                        <div className="mt-3 space-y-2 px-1">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Requisitos de seguridad:</p>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                            <div className={cn("flex items-center gap-2 text-[11px] transition-colors", passwordRequirements.length ? "text-green-600" : "text-gray-400")}>
+                              {passwordRequirements.length ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-gray-200" />}
+                              <span>Mínimo 8 caracteres</span>
+                            </div>
+                            <div className={cn("flex items-center gap-2 text-[11px] transition-colors", passwordRequirements.uppercase ? "text-green-600" : "text-gray-400")}>
+                              {passwordRequirements.uppercase ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-gray-200" />}
+                              <span>1 Mayúscula</span>
+                            </div>
+                            <div className={cn("flex items-center gap-2 text-[11px] transition-colors", passwordRequirements.number ? "text-green-600" : "text-gray-400")}>
+                              {passwordRequirements.number ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-gray-200" />}
+                              <span>1 Número</span>
+                            </div>
+                            <div className={cn("flex items-center gap-2 text-[11px] transition-colors", passwordRequirements.special ? "text-green-600" : "text-gray-400")}>
+                              {passwordRequirements.special ? <CheckCircle2 className="w-3 h-3" /> : <div className="w-3 h-3 rounded-full border border-gray-200" />}
+                              <span>1 Símbolo (@$!%*?&)</span>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -744,7 +796,11 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                       </div>
                     )}
 
-                    <button type="submit" disabled={loading || (mode === 'register' && !acceptedTerms)} className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow disabled:opacity-50 mt-4">
+                    <button 
+                      type="submit" 
+                      disabled={loading || (mode === 'register' && (!acceptedTerms || !isPasswordValid))} 
+                      className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow disabled:opacity-50 mt-4"
+                    >
                       {loading ? 'Procesando...' : mode === 'login' ? 'Ingresar' : 'Crear mi cuenta'}
                     </button>
 
