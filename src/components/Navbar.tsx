@@ -103,19 +103,11 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                     Mis Postulaciones
                   </Link>
                 ) : (
-                  <div className="flex items-center gap-1">
-                    <Link to="/clinic" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
-                      Mis Oportunidades
-                    </Link>
-                    <span className="text-gray-300 font-light">/</span>
-                    <Link 
-                      to="/clinic" 
-                      state={{ openModal: true }} 
-                      className="text-sm font-medium text-gray-400 hover:text-blue-600 transition-colors"
-                    >
-                      Crear oportunidad
-                    </Link>
-                  </div>
+                  <Link to="/clinic" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors flex items-center gap-1">
+                    Mis Oportunidades
+                    <span className="text-gray-300 font-light translate-y-[1px]">/</span>
+                    <span className="text-sm font-medium text-gray-400">Crear oportunidad</span>
+                  </Link>
                 )}
                 <Link to="/profile" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
                   Mi Perfil

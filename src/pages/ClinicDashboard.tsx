@@ -5,7 +5,6 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare, BriefcaseMedical, LayoutDashboard, Globe, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { cn, areShiftsOverlapping } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
 import ViewProfileModal from '../components/ViewProfileModal';
@@ -16,8 +15,6 @@ interface ClinicDashboardProps {
 }
 
 export default function ClinicDashboard({ user }: ClinicDashboardProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -38,13 +35,6 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   useEffect(() => {
     fetchShifts();
     
-    // Check if we should open the modal from navigation state
-    if (location.state?.openModal) {
-      setIsModalOpen(true);
-      // Clear state so it doesn't reopen on refresh/back
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-
     // Subscribe to shifts table for this specific clinic
     const channel = supabase
       .channel(`shifts-clinic-${user.id}`)
