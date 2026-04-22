@@ -86,11 +86,11 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+        <div className="flex justify-between h-20 items-center">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors">
-              <Activity className="h-8 w-8" />
-              <span className="font-bold text-xl tracking-tight">Abk Asistencial</span>
+              <img src="https://ivkklkvhfmxdvyqzyqvw.supabase.co/storage/v1/object/public/assets/Logo_de_Abk.png" alt="Abk Asistencial" className="h-20 w-20 object-contain" />
+              <span className="font-bold text-lg tracking-tight">Abk Asistencial</span>
             </Link>
             
             {currentUser && (

@@ -310,12 +310,10 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
       {/* NAVBAR */}
       <nav className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md border-b border-gray-100 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-              <div className="bg-blue-600 text-white p-1.5 rounded-lg">
-                <Activity className="w-5 h-5" />
-              </div>
-              <span className="font-bold text-xl text-gray-900 tracking-tight">ABK Asistencial</span>
+              <img src="https://ivkklkvhfmxdvyqzyqvw.supabase.co/storage/v1/object/public/assets/Logo_de_Abk.png" alt="ABK Asistencial" className="h-20 w-20 object-contain" />
+              <span className="font-bold text-lg text-gray-900 tracking-tight">ABK Asistencial</span>
             </div>
             
             <div className="hidden md:flex items-center gap-8">
