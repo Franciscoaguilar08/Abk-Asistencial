@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
+import { Skeleton, ClinicGroupSkeleton, ShiftCardSkeleton } from '../components/Skeleton';
 
 interface FeedProps {
   user: User;
@@ -336,9 +337,29 @@ export default function Feed({ user }: FeedProps) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 font-medium">Actualizando el feed de la red...</p>
+      <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="relative overflow-hidden bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+          <div className="relative z-10 space-y-4">
+            <Skeleton className="h-10 w-2/3" />
+            <Skeleton className="h-5 w-1/2" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+            <Skeleton className="h-11 w-full rounded-xl" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12 items-start">
+          <ClinicGroupSkeleton />
+          <ClinicGroupSkeleton />
+          <ShiftCardSkeleton />
+          <ShiftCardSkeleton />
+        </div>
       </div>
     );
   }

@@ -1,7 +1,7 @@
 import { 
   Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, 
   MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, 
-  Check, XCircle, Eye, EyeOff 
+  Check, XCircle, Eye, EyeOff, X 
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
@@ -66,6 +66,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [signUpSuccess, setSignUpSuccess] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -173,12 +174,13 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   };
 
   const handleResendConfirmation = async () => {
-    if (!email) return;
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return;
     try {
       setLoading(true);
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email,
+        email: trimmedEmail,
       });
       if (error) throw error;
       setResendSuccess(true);
@@ -191,12 +193,36 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
     }
   };
 
+  const handleResetPassword = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setAuthError("Ingresá tu correo para recuperar tu contraseña.");
+      return;
+    }
+    try {
+      setLoading(true);
+      setAuthError(null);
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: `${window.location.origin}/profile`,
+      });
+      if (error) throw error;
+      setResetSuccess(true);
+    } catch (error: any) {
+      console.error("Reset error", error);
+      setAuthError(error.message || "Error al solicitar el restablecimiento.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) return;
     setAuthError(null);
     setUnconfirmedEmail(false);
     setResendSuccess(false);
+    setResetSuccess(false);
     
     if (mode === 'register') {
       if (!selectedRole || !acceptedTerms) {
@@ -216,7 +242,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
       
       if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: trimmedEmail,
           password,
           options: {
             data: { role: selectedRole }
@@ -234,10 +260,10 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           setUnconfirmedEmail(false);
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
-            throw new Error('El correo o la contraseña son incorrectos. Verificá los datos o asegúrate de haber creado tu cuenta primero.');
+            throw new Error('El correo o la contraseña son incorrectos. Verificá los datos o asegurate de haber creado tu cuenta primero.');
           }
           if (error.message.includes('Email not confirmed')) {
             setUnconfirmedEmail(true);
@@ -670,9 +696,32 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                     </div>
                   )}
 
+                  {resetSuccess && (
+                     <div className="p-3 bg-green-50 border border-green-100 text-green-700 rounded-xl text-xs font-medium flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>Te enviamos un correo para restablecer tu contraseña.</span>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => setResetSuccess(false)}
+                          className="text-green-900/50 hover:text-green-900 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                     </div>
+                   )}
+
                   {unconfirmedEmail && (
-                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl space-y-3">
-                      <div className="flex items-start gap-3 text-orange-800">
+                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl space-y-3 relative">
+                      <button 
+                        type="button" 
+                        onClick={() => setUnconfirmedEmail(false)}
+                        className="absolute top-3 right-3 text-orange-900/40 hover:text-orange-900 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <div className="flex items-start gap-3 text-orange-800 pr-6">
                         <Mail className="w-5 h-5 shrink-0 mt-0.5" />
                         <div className="text-xs leading-relaxed">
                           <p className="font-bold">Correo no confirmado</p>
@@ -753,6 +802,19 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
+                      
+                      {mode === 'login' && (
+                        <div className="flex justify-end mt-1 px-1">
+                          <button 
+                            type="button" 
+                            onClick={handleResetPassword}
+                            disabled={loading}
+                            className="text-[11px] text-gray-400 hover:text-blue-600 transition-colors font-medium underline underline-offset-2"
+                          >
+                            ¿Olvidaste tu contraseña?
+                          </button>
+                        </div>
+                      )}
                       
                       {mode === 'register' && (
                         <div className="mt-3 space-y-2 px-1">

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import ChatModal from '../components/ChatModal';
+import { Skeleton } from '../components/Skeleton';
 
 interface InboxProps {
   user: User;
@@ -149,9 +150,20 @@ export default function Inbox({ user }: InboxProps) {
         </div>
 
         {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <p className="text-gray-500 text-sm italic">Cargando conversaciones...</p>
+          <div className="divide-y divide-gray-100">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4 flex gap-4">
+                <Skeleton className="w-12 h-12 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredConversations.length > 0 ? (
           <div className="divide-y divide-gray-100">

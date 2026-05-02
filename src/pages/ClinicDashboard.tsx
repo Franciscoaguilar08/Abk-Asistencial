@@ -3,12 +3,14 @@ import { supabase } from '../lib/supabase';
 import { User, Shift } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare, BriefcaseMedical, LayoutDashboard, Globe, Building2 } from 'lucide-react';
+import { Plus, Users, Calendar, Clock, DollarSign, MapPin, CheckCircle2, XCircle, UserCircle, Activity, ExternalLink, Star, MessageSquare, BriefcaseMedical, LayoutDashboard, Globe, Building2, Loader2, Settings, ShieldCheck, MapPinned, Users2, LayoutList, Search, PlusCircle } from 'lucide-react';
+import { Location, ClinicStaff } from '../types';
 import { toast } from 'sonner';
 import { cn, areShiftsOverlapping } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
 import ViewProfileModal from '../components/ViewProfileModal';
 import ShiftCard from '../components/ShiftCard';
+import { Skeleton, ShiftCardSkeleton } from '../components/Skeleton';
 
 interface ClinicDashboardProps {
   user: User;
@@ -16,6 +18,7 @@ interface ClinicDashboardProps {
 
 export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
@@ -34,6 +37,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
 
   useEffect(() => {
     fetchShifts();
+    fetchLocations();
     
     // Subscribe to shifts table for this specific clinic
     const channel = supabase
@@ -74,6 +78,19 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     }
   };
 
+  const fetchLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('clinic_id', user.id);
+      if (error) throw error;
+      setLocations(data as Location[]);
+    } catch (err) {
+      console.error('Error fetching locations:', err);
+    }
+  };
+
   const handleCreateShift = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -82,6 +99,8 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
     const dateStr = formData.get('date') as string;
     const startTime = formData.get('startTime') as string;
     const endTime = formData.get('endTime') as string;
+    const locationId = formData.get('locationId') as string;
+    const serviceName = formData.get('serviceName') as string;
 
     // 1. Validate Price
     if (price <= 0) {
@@ -132,7 +151,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       equipment_available: (formData.get('equipmentAvailable') as string)?.split(',').map(s => s.trim()).filter(Boolean) || [],
       contact_person: formData.get('contactPerson') as string || null,
       status: 'open',
-      applicants: []
+      applicants: [],
+      location_id: locationId || null,
+      service_name: serviceName || null
     };
 
     try {
@@ -331,55 +352,90 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
   };
 
   if (loading) {
-    return <div className="py-12 text-center text-gray-500">Cargando panel...</div>;
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 italic transition-all hover:shadow-md">
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <Skeleton className="h-12 w-48 rounded-xl" />
+        </div>
+        <div className="space-y-6">
+          <ShiftCardSkeleton />
+          <ShiftCardSkeleton />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 italic transition-all hover:shadow-md">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Mis Oportunidades</h1>
-          <p className="text-gray-500 mt-1">Gestioná tus búsquedas y asignaciones.</p>
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-900 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Building2 className="w-32 h-32 rotate-12" />
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-100 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-        >
-          <Plus className="w-5 h-5" />
-          Nueva Oportunidad
-        </button>
+        <div className="relative z-10">
+          <h1 className="text-3xl font-black text-white tracking-tight">Oportunidades y Cobertura</h1>
+          <p className="text-slate-400 mt-1 font-medium italic">Gestioná tus puestos vacantes y asigná profesionales.</p>
+        </div>
+        <div className="relative z-10 flex flex-wrap gap-3">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-lg shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <PlusCircle className="w-5 h-5" />
+            Nueva Guardia
+          </button>
+        </div>
       </div>
 
-      {user.verification_status !== 'verified' && (
-        <div className="bg-purple-50 border border-purple-100 rounded-2xl p-6 flex items-start gap-4 shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-            <Clock className="w-6 h-6 text-purple-600" />
-          </div>
-          <div>
-            <h3 className="font-black text-purple-900 text-lg">Perfil Institucional en Revisión</h3>
-            <p className="text-purple-700 mt-0.5 font-medium leading-relaxed">
-              Estamos validando la información de tu institución. Podés publicar oportunidades, 
-              pero para asignar profesionales y concretar coberturas necesitamos completar tu certificación ABK.
-            </p>
-          </div>
-        </div>
-      )}
-
+      {/* Shifts Section */}
       <div className="space-y-6">
+        {user.verification_status !== 'verified' && (
+          <div className="bg-purple-50 border border-purple-100 rounded-2xl p-6 flex items-start gap-4 shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
+              <Clock className="w-6 h-6 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="font-black text-purple-900 text-lg">Perfil Institucional en Revisión</h3>
+              <p className="text-purple-700 mt-0.5 font-medium leading-relaxed">
+                Estamos validando la información de tu institución. Podés publicar oportunidades, 
+                pero para asignar profesionales y concretar coberturas necesitamos completar tu certificación ABK.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-6">
           {shifts.length > 0 ? (
             shifts.map(shift => (
-              <ClinicShiftCard 
-                key={shift.id} 
-                shift={shift} 
-                onAssign={handleAssign}
-                onCancel={() => handleCancel(shift.id)}
-                onRefresh={fetchShifts}
-                onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
-                onViewProfile={fetchProfileData}
-                onMarkNoShow={handleMarkNoShow}
-                onDelete={() => handleDeleteShift(shift.id)}
-              />
+              <div key={shift.id} className="relative">
+                <ClinicShiftCard 
+                  shift={shift} 
+                  onAssign={handleAssign}
+                  onCancel={() => handleCancel(shift.id)}
+                  onRefresh={fetchShifts}
+                  onOpenChat={(docId, docName) => setActiveChat({ shiftId: shift.id, receiverId: docId, receiverName: docName })}
+                  onViewProfile={fetchProfileData}
+                  onMarkNoShow={handleMarkNoShow}
+                  onDelete={() => handleDeleteShift(shift.id)}
+                />
+                {(shift.location_id || shift.service_name) && (
+                  <div className="absolute top-4 right-4 flex gap-2">
+                     {shift.location_id && (
+                       <span className="px-2 py-1 bg-slate-800 text-white text-[9px] font-black rounded uppercase tracking-widest border border-slate-700">
+                         {locations.find(l => l.id === shift.location_id)?.name || 'SEDE'}
+                       </span>
+                     )}
+                     {shift.service_name && (
+                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-[9px] font-black rounded uppercase tracking-widest border border-blue-200">
+                         {shift.service_name}
+                       </span>
+                     )}
+                  </div>
+                )}
+              </div>
             ))
           ) : (
             <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-100">
@@ -387,13 +443,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 <Activity className="w-10 h-10 text-gray-300" />
               </div>
               <h3 className="text-xl font-bold text-gray-900">No tenés publicaciones activas</h3>
-              <p className="text-gray-500 mt-2 max-w-sm mx-auto">Publicá una nueva guardia para empezar a recibir postulaciones de médicos calificados.</p>
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="mt-6 text-blue-600 font-bold hover:underline"
-              >
-                Crear mi primera publicación →
-              </button>
+              <p className="text-gray-500 mt-1 max-w-sm mx-auto">Comenzá publicando una nueva guardia o servicio para el plantel de ABK.</p>
             </div>
           )}
         </div>
@@ -479,6 +529,19 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                     </div>
                   </div>
                 )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Unidad / Sede</label>
+                  <select name="locationId" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Sede Principal (Default)</option>
+                    {locations.map(loc => (
+                      <option key={loc.id} value={loc.id}>{loc.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Servicio / Sector</label>
+                  <input type="text" name="serviceName" placeholder="Ej: Guardia Adultos, UTI 2" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Especialidad / Rol requerido</label>
                   <input type="text" name="specialty" required placeholder="Ej: Pediatría, Kinesiología, Odontología..." className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -594,6 +657,45 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
   const [reviewTxt, setReviewTxt] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  const handleConfirmCompletionAndPay = async () => {
+    if (!shift.assigned_doctor_id) return;
+    
+    const confirmMsg = `¿Confirmas que la guardia fue realizada correctamente por ${assignedDoctor?.name || 'el profesional'}?\n\nAl confirmar, se registrará el pago de $${shift.price.toLocaleString('es-AR')} en su billetera virtual.`;
+    
+    if (!window.confirm(confirmMsg)) return;
+
+    setProcessingPayment(true);
+    try {
+      const { error } = await supabase.from('shifts').update({
+        status: 'completed',
+        payment_status: 'paid',
+        total_payment: shift.price,
+        attendance_confirmed: true
+      }).eq('id', shift.id);
+
+      if (error) throw error;
+      
+      // Also record a transaction for history
+      await supabase.from('transactions').insert({
+        user_id: shift.assigned_doctor_id,
+        shift_id: shift.id,
+        amount: shift.price,
+        type: 'credit',
+        status: 'completed',
+        description: `Pago por guardia: ${shift.specialty} - ${shift.clinic_name}`
+      });
+
+      toast.success('Guardia completada y pago registrado en el Wallet del profesional.');
+      onRefresh();
+    } catch (err) {
+      console.error('Error confirming completion:', err);
+      toast.error('Error al confirmar la realización de la guardia.');
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
 
   const submitRating = async () => {
     if (ratingVal === 0) {
@@ -801,16 +903,55 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Confirmación 24hs:</span>
-                  {shift.attendance_confirmed ? (
-                    <span className="text-green-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Confirmado</span>
+                  <span className="text-gray-600">Asistencia:</span>
+                  {shift.status === 'completed' ? (
+                    <span className="text-green-600 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4" /> Cumplida
+                    </span>
+                  ) : shift.status === 'noshow' ? (
+                    <span className="text-red-600 font-bold flex items-center gap-1">
+                      <XCircle className="w-4 h-4" /> Ausente
+                    </span>
                   ) : (
-                    <span className="text-yellow-600 font-medium">Pendiente</span>
+                    <span className="text-blue-600 font-medium">En proceso / Pendiente</span>
                   )}
                 </div>
+                {shift.payment_status === 'paid' && (
+                  <div className="flex items-center justify-between border-t border-gray-50 pt-2">
+                    <span className="text-gray-600">Wallet Status:</span>
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-black uppercase tracking-tighter">
+                      LIQUIDADO
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* Wallet / Payment Action */}
+            {shift.status === 'confirmed' && (
+               <div className="mt-3 p-4 bg-green-50 border border-green-200 rounded-xl space-y-3">
+                 <div className="flex items-center gap-2 text-green-800">
+                    <DollarSign className="w-5 h-5" />
+                    <span className="font-bold text-sm">Liquidación Express</span>
+                 </div>
+                 <p className="text-xs text-green-700 leading-tight">
+                   Si la guardia terminó, confirmala para liberar los honorarios ($ {shift.price.toLocaleString('es-AR')}) al Wallet del profesional.
+                 </p>
+                 <button 
+                    onClick={handleConfirmCompletionAndPay}
+                    disabled={processingPayment}
+                    className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                 >
+                   {processingPayment ? (
+                     <Loader2 className="w-4 h-4 animate-spin" />
+                   ) : (
+                     <CheckCircle2 className="w-4 h-4" />
+                   )}
+                   Confirmar Realización y Pagar
+                 </button>
+               </div>
+            )}
+            
             {/* Rating System */}
             {shift.status === 'completed' || (isConfirmed && new Date(shift.date) <= new Date()) ? (
               <div className="mt-4 p-4 bg-blue-50 bg-opacity-50 rounded-lg border border-blue-100">

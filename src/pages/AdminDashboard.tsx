@@ -9,6 +9,7 @@ import {
   XCircle, Clock, Eye, ChevronDown, ChevronUp, Briefcase,
   Building2, Star, TrendingUp
 } from 'lucide-react';
+import { Skeleton } from '../components/Skeleton';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
@@ -132,10 +133,25 @@ export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <ShieldAlert className="w-12 h-12 text-yellow-500 mx-auto mb-3 animate-pulse" />
-          <p className="text-gray-500">Cargando panel de administración...</p>
+      <div className="space-y-6 pb-12 animate-in fade-in duration-500">
+        <div className="bg-slate-900 h-24 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white p-5 rounded-xl border border-gray-200 space-y-3">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-8 w-12" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-4 border-b border-gray-200">
+          <Skeleton className="h-10 w-24 rounded-t-lg" />
+          <Skeleton className="h-10 w-24 rounded-t-lg" />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-xl" />
         </div>
       </div>
     );

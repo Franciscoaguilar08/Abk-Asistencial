@@ -17,6 +17,7 @@ import Feed from './pages/Feed';
 import Inbox from './pages/Inbox';
 import Navbar from './components/Navbar';
 import OnboardingModal from './components/OnboardingModal';
+import InstitutionalManagement from './pages/InstitutionalManagement';
 import { MessageSquarePlus } from 'lucide-react';
 
 export default function App() {
@@ -94,7 +95,18 @@ export default function App() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-blue-50 rounded-full animate-pulse" />
+          <div className="absolute inset-0 w-16 h-16 border-t-4 border-blue-600 rounded-full animate-spin" />
+        </div>
+        <div className="mt-6 flex flex-col items-center gap-1">
+          <span className="text-xl font-black text-gray-900 tracking-tight">ABK ASISTENCIAL</span>
+          <p className="text-gray-400 text-sm font-medium animate-pulse">Iniciando red de profesionales...</p>
+        </div>
+      </div>
+    );
   }
 
   if (currentUser && currentUser.verification_status === 'unverified' && currentUser.role !== null && currentUser.email !== 'franciscoaguilar008@gmail.com') {
@@ -149,6 +161,16 @@ export default function App() {
               element={
                 currentUser?.role === 'clinic' ? (
                   <ClinicDashboard user={currentUser} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/clinic-management" 
+              element={
+                currentUser?.role === 'clinic' ? (
+                  <InstitutionalManagement />
                 ) : (
                   <Navigate to="/" replace />
                 )

@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale';
 import { 
   MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, 
   UserCircle, ExternalLink, Star, MessageSquare, XCircle, BriefcaseMedical,
-  ShieldAlert
+  ShieldAlert, Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -183,10 +183,12 @@ export default function ShiftCard({
                 "px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap",
                 shift.status === 'noshow' ? "bg-red-100 text-red-700" :
                 shift.status === 'cancelled_by_clinic' ? "bg-orange-100 text-orange-700" :
+                shift.payment_status === 'paid' ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-500/20" :
                 isAssigned ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
               )}>
                 {shift.status === 'noshow' ? 'Ausencia' : 
                 shift.status === 'cancelled_by_clinic' ? 'Cancelada por Clínica' :
+                shift.payment_status === 'paid' ? 'Liquidada' :
                 isAssigned ? 'Confirmada' : 'Pendiente'}
               </span>
               {isTerminal && onDelete && (
@@ -232,9 +234,17 @@ export default function ShiftCard({
               </a>
             </div>
           </div>
-          <div className="flex items-center gap-2 font-medium text-gray-900 pt-1">
-            <DollarSign className="w-4 h-4 text-green-600" />
-            <span>${shift.price.toLocaleString('es-AR')} {shift.is_negotiable && <span className="text-xs text-gray-500 font-normal ml-1">(Apto a negociar)</span>}</span>
+          <div className="flex items-center justify-between gap-2 col-span-2 pt-1">
+            <div className="flex items-center gap-2 font-medium text-gray-900">
+              <DollarSign className="w-4 h-4 text-green-600" />
+              <span>${shift.price.toLocaleString('es-AR')} {shift.is_negotiable && <span className="text-xs text-gray-500 font-normal ml-1">(Apto a negociar)</span>}</span>
+            </div>
+            {shift.payment_status === 'paid' && isMyShift && userRole === 'doctor' && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 text-green-600 rounded-md border border-green-100 animate-in fade-in slide-in-from-right-2">
+                <Wallet className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold">EN WALLET</span>
+              </div>
+            )}
           </div>
           {isMyShift && userRole === 'doctor' && shift.applicant_proposals?.[userId!] && (
             <div className="flex items-center gap-2 font-medium pt-1">

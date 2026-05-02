@@ -25,6 +25,7 @@ export interface User {
   completion_rate?: number; // Porcentaje de asistencia perfecta (ej. 98)
   penalty_rate?: number; // Porcentaje de cancelaciones de instituciones
   cancellation_count?: number; // Cantidad total de cancelaciones
+  wallet_balance?: number; // Saldo acumulado (Fintech Médica)
   // Clinic specific
   address?: string;
   availability?: string; // Disponibilidad horaria/días
@@ -68,7 +69,44 @@ export interface Shift {
   review_for_doctor?: string;
   rating_for_clinic?: number; // 1 to 5, given by doctor
   review_for_clinic?: string;
+  payment_status?: 'pending' | 'processing' | 'paid';
+  total_payment?: number; // Monto final acordado
+  location_id?: string;
+  service_name?: string;
   created_at?: string;
+}
+
+export interface Location {
+  id: string;
+  clinic_id: string;
+  name: string;
+  address: string;
+  city: string;
+  phone?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ClinicStaff {
+  id: string;
+  clinic_id: string;
+  doctor_id: string;
+  service_name?: string;
+  notes?: string;
+  is_regular: boolean;
+  created_at: string;
+  doctor?: User; // Joined
+}
+
+export interface Transaction {
+  id: string;
+  user_id: string;
+  shift_id?: string;
+  amount: number;
+  type: 'credit' | 'debit';
+  status: 'pending' | 'completed' | 'cancelled';
+  description: string;
+  created_at: string;
 }
 
 export interface Message {

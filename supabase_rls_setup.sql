@@ -154,9 +154,80 @@ ON messages FOR SELECT
 TO authenticated 
 USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 
--- Permite que un usuario envíe mensajes como sí mismo
-DROP POLICY IF EXISTS "Users can insert their own messages" ON messages;
-CREATE POLICY "Users can insert their own messages" 
-ON messages FOR INSERT 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance DECIMAL(12,2) DEFAULT 0.00;
+
+-- Tabla de transacciones para el Wallet
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('credit', 'debit')),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'cancelled')),
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Habilitar RLS para transacciones
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own transactions" ON transactions;
+CREATE POLICY "Users can view their own transactions" 
+ON transactions FOR SELECT 
 TO authenticated 
-WITH CHECK (auth.uid() = sender_id);
+USING (auth.uid() = user_id);
+
+-- Actualizar la tabla de shifts para incluir estado de pago
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS location_id UUID;
+ALTER TABLE shifts ADD COLUMN IF NOT EXISTS service_name TEXT; -- e.g. "Guardia Adultos", "UTI", "Piso 4"
+
+-- Tabla de Sedes (Multi-location)
+CREATE TABLE IF NOT EXISTS locations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  clinic_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  address TEXT NOT NULL,
+  city TEXT NOT NULL,
+  phone TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Tabla de Plantel Médico (Trusted Staff)
+CREATE TABLE IF NOT EXISTS clinic_staff (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  clinic_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  doctor_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  service_name TEXT,
+  notes TEXT,
+  is_regular BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(clinic_id, doctor_id)
+);
+
+-- RLS para Sedes
+ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Clinics can manage their own locations" ON locations;
+CREATE POLICY "Clinics can manage their own locations"
+ON locations FOR ALL
+TO authenticated
+USING (auth.uid() = clinic_id)
+WITH CHECK (auth.uid() = clinic_id);
+
+DROP POLICY IF EXISTS "Shifts can see location names" ON locations;
+CREATE POLICY "Shifts can see location names"
+ON locations FOR SELECT
+TO authenticated
+USING (true);
+
+-- RLS para Plantel
+ALTER TABLE clinic_staff ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Clinics can manage their own staff" ON clinic_staff;
+CREATE POLICY "Clinics can manage their own staff"
+ON clinic_staff FOR ALL
+TO authenticated
+USING (auth.uid() = clinic_id)
+WITH CHECK (auth.uid() = clinic_id);
+

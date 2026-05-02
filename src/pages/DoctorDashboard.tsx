@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import ViewProfileModal from '../components/ViewProfileModal';
 import ShiftCard from '../components/ShiftCard';
-import { User, Shift } from '../types';
+import { User, Shift, Transaction } from '../types';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare, Building2, XCircle } from 'lucide-react';
+import { MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, BriefcaseMedical, UserCircle, CalendarPlus, Filter, ExternalLink, Star, MessageSquare, Building2, XCircle, Wallet, TrendingUp, ArrowUpRight, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, areShiftsOverlapping } from '../lib/utils';
 import ChatModal from '../components/ChatModal';
+import { Skeleton, ShiftCardSkeleton } from '../components/Skeleton';
 
 interface DoctorDashboardProps {
   user: User;
@@ -19,6 +20,9 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<{ shiftId: string; receiverId: string; receiverName: string } | null>(null);
   const [viewedProfileData, setViewedProfileData] = useState<User | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [showHistory, setShowHistory] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [dismissedShiftIds, setDismissedShiftIds] = useState<string[]>(() => {
     const saved = localStorage.getItem(`dismissed_shifts_${user.id}`);
     return saved ? JSON.parse(saved) : [];
@@ -26,6 +30,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
 
   useEffect(() => {
     fetchShifts();
+    fetchWalletBalance();
     
     // Subscribe to shifts relevant to this doctor
     const channel = supabase
@@ -35,6 +40,7 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         { event: '*', schema: 'public', table: 'shifts' },
         () => {
           fetchShifts();
+          fetchWalletBalance();
         }
       )
       .subscribe();
@@ -43,6 +49,44 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
       supabase.removeChannel(channel);
     };
   }, [user.id]);
+
+  const fetchWalletBalance = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('total_payment')
+        .eq('assigned_doctor_id', user.id)
+        .eq('payment_status', 'paid');
+      
+      if (error) throw error;
+      
+      const total = (data || []).reduce((acc, curr) => acc + (curr.total_payment || 0), 0);
+      setWalletBalance(total);
+    } catch (err) {
+      console.error('Error fetching wallet balance:', err);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setTransactions(data as Transaction[]);
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (showHistory) {
+      fetchTransactions();
+    }
+  }, [showHistory]);
 
   const fetchShifts = async () => {
     try {
@@ -182,19 +226,71 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
   };
 
   if (loading) {
-    return <div className="py-12 text-center text-gray-500">Cargando oportunidades...</div>;
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-5 w-48" />
+          </div>
+          <Skeleton className="h-10 w-24 rounded-2xl" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+          <ShiftCardSkeleton />
+          <ShiftCardSkeleton />
+          <ShiftCardSkeleton />
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto px-4 sm:px-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mis Postulaciones</h1>
-          <p className="text-gray-500 mt-1 font-medium">Hacé el seguimiento de tus postulaciones y guardias asignadas.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-8 rounded-3xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Mis Postulaciones</h1>
+            <p className="text-gray-500 mt-1 font-medium">Gestioná tus guardias de forma centralizada.</p>
+          </div>
+          <div className="bg-blue-50 px-4 py-2 rounded-2xl flex items-center gap-2 self-start md:self-center">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            <span className="text-blue-700 font-black tracking-tight">{shifts.length} activas</span>
+          </div>
         </div>
-        <div className="bg-blue-50 px-4 py-2 rounded-2xl flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-600" />
-          <span className="text-blue-700 font-black tracking-tight">{shifts.length} activas</span>
+
+        {/* Wallet Wallet Card */}
+        <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Wallet className="w-24 h-24 rotate-12" />
+            </div>
+            <div className="relative z-10 space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-xs font-bold tracking-wider uppercase border border-white/10">
+                        <TrendingUp className="w-3 h-3 text-green-400" />
+                        Fintech Médica
+                    </div>
+                </div>
+                <div>
+                    <p className="text-slate-400 text-sm font-medium">Billetera de Liquidación</p>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-black tracking-tight">$ {walletBalance.toLocaleString('es-AR')}</span>
+                        <span className="text-xs text-green-400 font-bold bg-green-400/10 px-2 py-0.5 rounded">ARS</span>
+                    </div>
+                </div>
+                <div className="pt-2 flex gap-3">
+                    <button className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
+                        <ArrowUpRight className="w-4 h-4" />
+                        Retirar Dinero
+                    </button>
+                    <button 
+                      onClick={() => setShowHistory(true)}
+                      className="w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-colors border border-white/5" 
+                      title="Ver Historial"
+                    >
+                        <History className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
         </div>
       </div>
 
@@ -254,6 +350,79 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
           receiverName={activeChat.receiverName}
           onClose={() => setActiveChat(null)}
         />
+      )}
+
+      {showHistory && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+                  <History className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">Historial de Pagos</h2>
+                  <p className="text-xs text-gray-500 font-medium">Billetera Express • Fintech Médica</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowHistory(false)}
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <XCircle className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+              {transactions.length > 0 ? (
+                transactions.map(tx => (
+                  <div key={tx.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-blue-100 transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        tx.type === 'credit' ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                      )}>
+                        {tx.type === 'credit' ? <ArrowUpRight className="w-5 h-5" /> : <ChevronRight className="w-5 h-5 rotate-90" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{tx.description}</p>
+                        <p className="text-[11px] text-gray-500">{format(new Date(tx.created_at), "d 'de' MMMM, HH:mm", { locale: es })}h</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={cn(
+                        "font-black text-sm",
+                        tx.type === 'credit' ? "text-green-600" : "text-red-600"
+                      )}>
+                        {tx.type === 'credit' ? '+' : '-'}${tx.amount.toLocaleString('es-AR')}
+                      </p>
+                      <span className="text-[9px] font-black bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">
+                        {tx.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100 shadow-inner">
+                      <History className="w-8 h-8 text-gray-300" />
+                   </div>
+                   <p className="text-gray-500 font-medium">Aún no tenés movimientos registrados.</p>
+                   <p className="text-xs text-gray-400 mt-1">Tus guardias liquidadas aparecerán acá.</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-center">
+              <button 
+                onClick={() => setShowHistory(false)}
+                className="text-blue-600 font-bold text-sm hover:underline"
+              >
+                Cerrar Historial
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
