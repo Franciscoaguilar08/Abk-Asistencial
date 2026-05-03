@@ -11,6 +11,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ currentUser, onLogout }: NavbarProps) {
+  const location = useLocation();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -99,9 +100,20 @@ export default function Navbar({ currentUser, onLogout }: NavbarProps) {
                   Feed de la Red
                 </Link>
                 {currentUser.role === 'doctor' ? (
-                  <Link to="/doctor" className="text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
-                    Mis Postulaciones
-                  </Link>
+                  <>
+                    <Link to="/doctor" className={cn(
+                      "text-sm font-semibold transition-colors",
+                      location.pathname === '/doctor' ? "text-blue-600" : "text-gray-600 hover:text-blue-600"
+                    )}>
+                      Mis Postulaciones
+                    </Link>
+                    <Link to="/calendar" className={cn(
+                      "text-sm font-semibold transition-colors",
+                      location.pathname === '/calendar' ? "text-blue-600" : "text-gray-600 hover:text-blue-600"
+                    )}>
+                      Mi Calendario
+                    </Link>
+                  </>
                 ) : (
                   <>
                     <Link to="/clinic" className={cn(

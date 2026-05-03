@@ -145,7 +145,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       date: dateStr,
       start_time: startTime,
       end_time: endTime,
-      zone: formData.get('zone') as string,
+      zones: formData.getAll('zones') as string[],
       location: formData.get('location') as string,
       requirements: (formData.get('requirements') as string).split(',').map(s => s.trim()).filter(Boolean),
       equipment_available: (formData.get('equipmentAvailable') as string)?.split(',').map(s => s.trim()).filter(Boolean) || [],
@@ -560,15 +560,16 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                   <input type="date" name="date" required min={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zona</label>
-                  <select name="zone" defaultValue={user.jurisdiction || 'CABA'} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option>CABA</option>
-                    <option>GBA Norte</option>
-                    <option>GBA Sur</option>
-                    <option>GBA Oeste</option>
-                    <option>La Plata</option>
-                    <option>Interior</option>
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 font-bold">Zonas de Cobertura (Multizona)</label>
+                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100 italic">
+                    {['CABA', 'GBA Norte', 'GBA Sur', 'GBA Oeste', 'La Plata', 'Interior'].map(z => (
+                      <label key={z} className="flex items-center gap-2 text-sm cursor-pointer hover:text-blue-600 transition-colors">
+                        <input type="checkbox" name="zones" value={z} className="rounded text-blue-600 focus:ring-blue-500" />
+                        <span className="font-medium">{z}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Seleccioná todas las zonas donde este puesto es válido.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Dirección exacta</label>

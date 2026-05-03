@@ -305,7 +305,9 @@ export default function Feed({ user }: FeedProps) {
     const matchesSearch = s.clinic_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          s.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          s.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesZone = selectedZone === 'Todas' || s.zone === selectedZone;
+    const matchesZone = selectedZone === 'Todas' || 
+                       s.zone === selectedZone || 
+                       (s.zones && s.zones.includes(selectedZone));
     const matchesCategory = selectedCategory === 'Todas' || s.category === selectedCategory;
     const matchesSpecialty = selectedSpecialty === 'Todas' || s.specialty === selectedSpecialty;
     
@@ -332,7 +334,7 @@ export default function Feed({ user }: FeedProps) {
 
   const clinicEntries = Object.entries(groupedByClinic);
 
-  const availableZones = ['Todas', ...Array.from(new Set(shifts.map(s => s.zone).filter(Boolean)))];
+  const availableZones = ['Todas', ...Array.from(new Set(shifts.flatMap(s => s.zones || (s.zone ? [s.zone] : []))))];
   const availableSpecialties = ['Todas', ...Array.from(new Set(shifts.map(s => s.specialty)))];
 
   if (loading) {

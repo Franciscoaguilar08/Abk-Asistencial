@@ -222,7 +222,17 @@ export default function ShiftCard({
           <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
             <div className="flex flex-col">
-              {shift.zone && <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{shift.zone}</span>}
+              <div className="flex flex-wrap gap-1 mb-1">
+                {shift.zones && shift.zones.length > 0 ? (
+                  shift.zones.map(z => (
+                    <span key={z} className="text-[10px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-blue-100">
+                      {z}
+                    </span>
+                  ))
+                ) : (
+                  shift.zone && <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{shift.zone}</span>
+                )}
+              </div>
               <a 
                 href={`https://maps.google.com/?q=${encodeURIComponent(shift.location)}`}
                 target="_blank"

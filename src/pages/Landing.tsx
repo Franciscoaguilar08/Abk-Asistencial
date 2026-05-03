@@ -361,9 +361,9 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         </div>
       </nav>
 
-      <main className="pt-16 flex-grow">
+      <main className="pt-20 flex-grow">
         {/* HERO SECTION */}
-        <section className="relative pt-20 pb-24 lg:pt-32 lg:pb-40 overflow-hidden">
+        <section className="relative pt-12 pb-24 lg:pt-20 lg:pb-40 overflow-hidden">
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50 via-white to-gray-50 opacity-90" />
           <div className="max-w-5xl mx-auto px-4 text-center">
             <motion.h1 

@@ -18,6 +18,7 @@ import Inbox from './pages/Inbox';
 import Navbar from './components/Navbar';
 import OnboardingModal from './components/OnboardingModal';
 import InstitutionalManagement from './pages/InstitutionalManagement';
+import DoctorCalendar from './pages/DoctorCalendar';
 import { MessageSquarePlus } from 'lucide-react';
 
 export default function App() {
@@ -161,6 +162,16 @@ export default function App() {
               element={
                 currentUser?.role === 'clinic' ? (
                   <ClinicDashboard user={currentUser} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } 
+            />
+            <Route 
+              path="/calendar" 
+              element={
+                currentUser?.role === 'doctor' ? (
+                  <DoctorCalendar />
                 ) : (
                   <Navigate to="/" replace />
                 )

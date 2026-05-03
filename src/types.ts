@@ -52,7 +52,8 @@ export interface Shift {
   start_time: string;
   end_time: string;
   location: string;
-  zone?: string; // e.g., 'CABA', 'GBA Norte', 'GBA Sur'
+  zone?: string; // Kept for backward compatibility
+  zones?: string[]; // New: support for multi-zone publications
   description?: string; // Long visual description
   requirements: string[];
   equipment_available?: string[];
@@ -127,4 +128,17 @@ export interface AppNotification {
   read: boolean;
   shift_id?: string;
   created_at: string;
+}
+
+export interface ExternalWork {
+  id: string;
+  user_id: string;
+  title: string;
+  location?: string;
+  date: string; // ISO format
+  start_time: string;
+  end_time: string;
+  color?: string;
+  notes?: string;
+  created_at?: string;
 }
