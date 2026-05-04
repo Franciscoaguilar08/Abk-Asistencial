@@ -149,7 +149,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       start_time: startTime || '00:00',
       end_time: endTime || '00:00',
       zones: formData.getAll('zones') as string[],
-      location: formData.get('location') as string,
+      location: (formData.get('location') as string) || user.address || 'Ubicación no especificada',
       requirements: (formData.get('requirements') as string).split(',').map(s => s.trim()).filter(Boolean),
       equipment_available: (formData.get('equipmentAvailable') as string)?.split(',').map(s => s.trim()).filter(Boolean) || [],
       contact_person: formData.get('contactPerson') as string || null,
@@ -576,8 +576,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                   <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Seleccioná todas las zonas donde este puesto es válido.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección exacta</label>
-                  <input type="text" name="location" defaultValue={user.address} required placeholder="Ej: Av. Rivadavia 1234" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección exacta (Opcional)</label>
+                  <input type="text" name="location" placeholder="Ej: Av. Rivadavia 1234" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-[10px] text-gray-500 mt-1 italic">Si no especificás una, se usará la de tu perfil institucional.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo / Descripción breve</label>
@@ -825,21 +826,30 @@ function ClinicShiftCard({ shift, onAssign, onCancel, onRefresh, onOpenChat, onV
           )}
         </div>
         
-        {shift.description && (
+          {shift.description && (
           <div className="bg-blue-50/30 p-3 rounded-lg border border-blue-100 text-gray-900 text-sm leading-relaxed">
             {shift.description}
           </div>
         )}
 
         <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            <span className="capitalize">{format(new Date(shift.date), "d MMM yyyy", { locale: es })}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span>{shift.start_time} - {shift.end_time}</span>
-          </div>
+          {shift.category !== 'empleo' ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span className="capitalize">{format(new Date(shift.date), "d MMM yyyy", { locale: es })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-400" />
+                <span>{shift.start_time} - {shift.end_time}</span>
+              </div>
+            </>
+          ) : (
+            <div className="bg-green-50 p-3 rounded-lg border border-green-100 flex items-center gap-2 text-green-900 font-bold col-span-2">
+              <Activity className="w-4 h-4" />
+              <span>Búsqueda laboral activa / Puesto fijo</span>
+            </div>
+          )}
           <div className="flex items-start gap-2 col-span-2">
             <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
             <div className="flex flex-col">
