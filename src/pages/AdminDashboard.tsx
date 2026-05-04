@@ -17,7 +17,7 @@ interface AdminDashboardProps {
   currentUser: User | null;
 }
 
-const ADMIN_EMAIL = 'franciscoaguilar008@gmail.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 export default function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const [users, setUsers] = useState<User[]>([]);

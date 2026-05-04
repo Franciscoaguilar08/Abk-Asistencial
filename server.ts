@@ -5,18 +5,43 @@ import { fileURLToPath } from 'url';
 import { Resend } from 'resend';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { rateLimit } from 'express-rate-limit';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper to escape HTML to prevent injection
+const escapeHTML = (str: string) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
   
+  // Rate limiting
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 100, // Limit each IP to 100 requests per window
+    standardHeaders: 'draft-7', // Use combined RateLimit headers
+    legacyHeaders: false, // Disable X-RateLimit-* headers
+    message: { error: 'Demasiadas peticiones. Por favor, intentá de nuevo más tarde.' }
+  });
+
+  // Apply rate limiter to all api routes
+  app.use('/api/', limiter);
+
   const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
   const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'franciscoaguilar008@gmail.com';
 
   app.use(express.json());
 
@@ -57,18 +82,18 @@ async function startServer() {
               <img src="https://ivkklkvhfmxdvyqzyqvw.supabase.co/storage/v1/object/public/assets/Logo_de_Abk.png" alt="ABK Asistencial" style="height: 64px; width: 64px; object-fit: contain;" />
               <p style="font-size: 18px; font-weight: bold; color: #111827; margin-top: 12px;">ABK Asistencial</p>
             </div>
-            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 12px;">¡Felicitaciones, ${doctorName}!</h2>
+            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 12px;">¡Felicitaciones, ${escapeHTML(doctorName)}!</h2>
             <p style="font-size: 15px; color: #4b5563; line-height: 1.6;">Te asignaron a una guardia. Estos son los detalles:</p>
             <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 6px 0;"><strong>Institución:</strong> ${shiftData.clinic_name}</p>
-              <p style="margin: 6px 0;"><strong>Especialidad:</strong> ${shiftData.specialty}</p>
-              <p style="margin: 6px 0;"><strong>Fecha:</strong> ${shiftData.date}</p>
-              <p style="margin: 6px 0;"><strong>Horario:</strong> ${shiftData.start_time} - ${shiftData.end_time}</p>
-              <p style="margin: 6px 0;"><strong>Ubicación:</strong> ${shiftData.location}</p>
+              <p style="margin: 6px 0;"><strong>Institución:</strong> ${escapeHTML(shiftData.clinic_name)}</p>
+              <p style="margin: 6px 0;"><strong>Especialidad:</strong> ${escapeHTML(shiftData.specialty)}</p>
+              <p style="margin: 6px 0;"><strong>Fecha:</strong> ${escapeHTML(shiftData.date)}</p>
+              <p style="margin: 6px 0;"><strong>Horario:</strong> ${escapeHTML(shiftData.start_time)} - ${escapeHTML(shiftData.end_time)}</p>
+              <p style="margin: 6px 0;"><strong>Ubicación:</strong> ${escapeHTML(shiftData.location)}</p>
               <p style="margin: 6px 0;"><strong>Honorarios:</strong> $${shiftData.price.toLocaleString('es-AR')}</p>
             </div>
             <div style="text-align: center; margin: 32px 0;">
-              <a href="https://abk-asistencial.vercel.app" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+              <a href="https://ais-dev-kiie4wvsevxwcifnzcssac-155752184775.us-east5.run.app" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
                 Ver mi guardia
               </a>
             </div>
@@ -102,15 +127,15 @@ async function startServer() {
             </div>
             <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 12px;">Nuevo postulante</h2>
             <p style="font-size: 15px; color: #4b5563; line-height: 1.6;">
-              <strong>${doctorName}</strong> se postuló para una de tus guardias en ABK Asistencial.
+              <strong>${escapeHTML(doctorName)}</strong> se postuló para una de tus guardias en ABK Asistencial.
             </p>
             <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 6px 0;"><strong>Especialidad:</strong> ${shiftData.specialty}</p>
-              <p style="margin: 6px 0;"><strong>Fecha:</strong> ${shiftData.date}</p>
-              <p style="margin: 6px 0;"><strong>Horario:</strong> ${shiftData.start_time} - ${shiftData.end_time}</p>
+              <p style="margin: 6px 0;"><strong>Especialidad:</strong> ${escapeHTML(shiftData.specialty)}</p>
+              <p style="margin: 6px 0;"><strong>Fecha:</strong> ${escapeHTML(shiftData.date)}</p>
+              <p style="margin: 6px 0;"><strong>Horario:</strong> ${escapeHTML(shiftData.start_time)} - ${escapeHTML(shiftData.end_time)}</p>
             </div>
             <div style="text-align: center; margin: 32px 0;">
-              <a href="https://abk-asistencial.vercel.app" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+              <a href="https://ais-dev-kiie4wvsevxwcifnzcssac-155752184775.us-east5.run.app" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
                 Ver postulantes
               </a>
             </div>
@@ -138,18 +163,18 @@ async function startServer() {
     try {
       const { data, error } = await resend.emails.send({
         from: 'ABK Asistencial <notifications@resend.dev>', // This should be a verified domain in production
-        to: recipients || ['franciscoaguilar008@gmail.com'], // Fallback for testing
-        subject: `Nueva Guardia Disponible: ${shiftData.specialty} en ${shiftData.clinic_name}`,
+        to: recipients || [ADMIN_EMAIL], 
+        subject: `Nueva Guardia Disponible: ${escapeHTML(shiftData.specialty)} en ${escapeHTML(shiftData.clinic_name)}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; rounded: 12px;">
             <h2 style="color: #2563eb;">¡Nueva guardia disponible!</h2>
             <p style="font-size: 16px; color: #374151;">Se ha publicado una nueva oportunidad en <strong>ABK Asistencial</strong>.</p>
             
             <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p><strong>Especialidad:</strong> ${shiftData.specialty}</p>
-              <p><strong>Institución:</strong> ${shiftData.clinic_name}</p>
-              <p><strong>Fecha:</strong> ${shiftData.date}</p>
-              <p><strong>Ubicación:</strong> ${shiftData.location || shiftData.zone}</p>
+              <p><strong>Especialidad:</strong> ${escapeHTML(shiftData.specialty)}</p>
+              <p><strong>Institución:</strong> ${escapeHTML(shiftData.clinic_name)}</p>
+              <p><strong>Fecha:</strong> ${escapeHTML(shiftData.date)}</p>
+              <p><strong>Ubicación:</strong> ${escapeHTML(shiftData.location || shiftData.zone)}</p>
               <p><strong>Honorarios:</strong> $${shiftData.price}</p>
             </div>
 

@@ -110,7 +110,7 @@ export default function App() {
     );
   }
 
-  if (currentUser && currentUser.verification_status === 'unverified' && currentUser.role !== null && currentUser.email !== 'franciscoaguilar008@gmail.com') {
+  if (currentUser && currentUser.verification_status === 'unverified' && currentUser.role !== null && currentUser.email !== import.meta.env.VITE_ADMIN_EMAIL) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
         <Toaster position="top-center" richColors />

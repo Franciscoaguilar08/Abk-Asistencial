@@ -139,43 +139,37 @@ export default function ShiftCard({
         "hover:border-blue-300 hover:shadow-blue-50"
       )}>
       <div className="p-5 flex-1 space-y-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={cn(
-                "px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                shift.category === 'evento' ? "bg-purple-100 text-purple-700" : 
-                shift.category === 'empleo' ? "bg-green-100 text-green-700" :
-                shift.category === 'suplencia' ? "bg-orange-100 text-orange-700" :
-                shift.category === 'traslado' ? "bg-amber-100 text-amber-700" :
-                "bg-blue-100 text-blue-700"
-              )}>
-                {shift.category === 'evento' ? 'Evento' : 
-                 shift.category === 'empleo' ? 'Empleo' :
-                 shift.category === 'suplencia' ? 'Suplencia' :
-                 shift.category === 'traslado' ? 'Traslado' :
-                 'Guardia Clínica'}
-              </span>
-              {shift.job_duration && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-wider">
-                  {shift.job_duration === 'tiempo_completo' ? 'Tiempo Completo' :
-                   shift.job_duration === 'semanal' ? 'Semanal' :
-                   shift.job_duration === '3_meses' ? '3 Meses' : 'Fijo/Temporal'}
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider",
+                  shift.category === 'empleo' ? "bg-green-100 text-green-700" :
+                  shift.category === 'evento' ? "bg-purple-100 text-purple-700" :
+                  shift.category === 'suplencia' ? "bg-orange-100 text-orange-700" :
+                  shift.category === 'traslado' ? "bg-amber-100 text-amber-700" :
+                  "bg-blue-100 text-blue-700"
+                )}>
+                  {shift.category}
                 </span>
-              )}
+                <h3 className="text-lg font-black text-gray-900 leading-tight flex items-center gap-2">
+                  {shift.clinic_name}
+                </h3>
+              </div>
+              <p className="text-sm font-bold text-gray-600 flex items-center gap-1.5 capitalize">
+                {shift.specialty}
+              </p>
             </div>
-            <button onClick={onViewProfile} className="text-left group mb-1 flex items-center gap-3">
-              {shift.clinic_avatar && (
-                <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-100 shadow-sm shrink-0">
-                  <img src={shift.clinic_avatar} alt={shift.clinic_name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                </div>
-              )}
-              <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors leading-tight flex items-center gap-2">
-                {shift.clinic_name}
-                <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </h3>
-            </button>
-            <p className="text-sm font-medium text-gray-600">{shift.specialty}</p>
+            {shift.price > 0 && (
+              <div className="text-right">
+                <p className="text-sm font-black text-blue-600">${shift.price.toLocaleString('es-AR')}</p>
+                {shift.is_negotiable && (
+                  <span className="text-[10px] font-bold text-green-600 uppercase flex items-center gap-0.5 justify-end">
+                    <DollarSign className="w-2.5 h-2.5" /> Negociable
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           {isMyShift && userRole === 'doctor' && (
             <div className="flex flex-col items-end gap-2">
@@ -298,15 +292,23 @@ export default function ShiftCard({
             </div>
           </div>
         )}
-        {shift.contact_person && isAssigned && userRole === 'doctor' && (
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-between bg-green-50/50 p-2 rounded-lg text-sm text-gray-700">
+        {shift.contact_person && (
+          <div className="pt-3 border-t border-gray-100 flex items-center justify-between bg-gray-50/50 p-2 rounded-lg text-sm text-gray-700 mt-2">
             <div className="flex items-center gap-2">
-              <UserCircle className="w-5 h-5 text-green-600" />
+              <MessageSquare className="w-4 h-4 text-blue-600" />
               <div>
-                <p className="font-semibold text-gray-900">Contacto de la Institución</p>
-                <p>{shift.contact_person}</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Medio de Contacto</p>
+                <p className="font-bold text-gray-800">{shift.contact_person}</p>
               </div>
             </div>
+            {userRole === 'doctor' && (
+              <button 
+                onClick={() => toast.info('Podés contactar directamente una vez postulado.')}
+                className="p-1 px-2 bg-white border border-gray-200 rounded-md text-[10px] font-black text-gray-600 hover:bg-gray-50 transition-all uppercase"
+              >
+                Copiar
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -524,6 +526,5 @@ export default function ShiftCard({
         </div>
       )}
     </div>
-  </div>
   );
 }
