@@ -1,7 +1,7 @@
 import { 
   Stethoscope, Building2, ShieldCheck, Zap, Mail, Lock, BadgeCheck, 
   MessageSquareLock, CheckCircle2, Activity, Play, ChevronRight, 
-  Check, XCircle, Eye, EyeOff, X 
+  Check, XCircle, Eye, EyeOff, X, Loader2
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
@@ -70,6 +70,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   const [unconfirmedEmail, setUnconfirmedEmail] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [verifyingSession, setVerifyingSession] = useState(false);
 
   // Password validation checks
   const passwordRequirements = {
@@ -94,22 +95,36 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   }, [showAuthModal, showRolePicker]);
 
   useEffect(() => {
-    const checkSession = async () => {
+    const handleAuthRedirect = async () => {
+      // Check if we have an auth-related fragment in the URL
+      const hash = window.location.hash;
+      const search = window.location.search;
+      
+      if (hash.includes('access_token') || hash.includes('type=signup') || search.includes('type=signup')) {
+        setVerifyingSession(true);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        setVerifyingSession(true);
         checkProfile(session.user);
       }
     };
 
-    checkSession();
+    handleAuthRedirect();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth event:", event);
       if (session) {
         setSessionUser(session.user);
-        checkProfile(session.user);
+        if (event === 'SIGNED_IN') {
+           setVerifyingSession(true);
+           checkProfile(session.user);
+        }
       } else {
         setSessionUser(null);
         setShowRolePicker(false);
+        setVerifyingSession(false);
       }
     });
 
@@ -154,8 +169,12 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
       // Session exists but no profile in public.users -> Show role picker
       setSessionUser(authUser);
       setShowRolePicker(true);
+      setVerifyingSession(false);
     } else if (existingProfile) {
+      setVerifyingSession(false);
       onLoginSuccess(existingProfile as User);
+    } else if (error) {
+       setVerifyingSession(false);
     }
   };
 
@@ -331,6 +350,27 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
       setLoading(false);
     }
   };
+
+  if (verifyingSession) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center space-y-6"
+        >
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
+             <Activity className="w-10 h-10 text-blue-600 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-gray-900">Verificando tu sesión</h2>
+            <p className="text-gray-500 font-medium">Estamos validando tu acceso a ABK Asistencial...</p>
+          </div>
+          <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-sans">

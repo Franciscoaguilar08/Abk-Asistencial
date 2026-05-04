@@ -108,27 +108,30 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       return;
     }
 
-    // 2. Validate Date (not in the past)
-    const selectedDate = new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // 2. Validate Date (not in the past) - skip for Empleo
+    let selectedDate: Date | null = null;
+    if (formData.get('category') !== 'empleo' && dateStr) {
+      selectedDate = new Date(dateStr + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    if (selectedDate < today) {
-      toast.error('La fecha no puede ser en el pasado');
-      return;
+      if (selectedDate < today) {
+        toast.error('La fecha no puede ser en el pasado');
+        return;
+      }
     }
 
-    // 3. Validate Times
-    if (!startTime || !endTime) {
-      toast.error('Debes ingresar horario de inicio y fin');
-      return;
-    }
+    // 3. Validate Times - skip for Empleo
+    if (formData.get('category') !== 'empleo') {
+      if (!startTime || !endTime) {
+        toast.error('Debes ingresar horario de inicio y fin');
+        return;
+      }
 
-    // Basic time validation: if it's the same day, start should be before end 
-    // (Note: some shifts might cross midnight, but usually start/end are on the same 24h block in this simple UI)
-    if (startTime === endTime) {
-      toast.error('El horario de inicio y fin no pueden ser iguales');
-      return;
+      if (startTime === endTime) {
+        toast.error('El horario de inicio y fin no pueden ser iguales');
+        return;
+      }
     }
 
     const newShift = {
@@ -142,9 +145,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
       description: formData.get('description') as string,
       price: price,
       is_negotiable: formData.get('is_negotiable') === 'on',
-      date: dateStr,
-      start_time: startTime,
-      end_time: endTime,
+      date: dateStr || (formData.get('category') === 'empleo' ? format(new Date(), 'yyyy-MM-dd') : ''),
+      start_time: startTime || '00:00',
+      end_time: endTime || '00:00',
       zones: formData.getAll('zones') as string[],
       location: formData.get('location') as string,
       requirements: (formData.get('requirements') as string).split(',').map(s => s.trim()).filter(Boolean),
@@ -376,8 +379,8 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
           <Building2 className="w-32 h-32 rotate-12" />
         </div>
         <div className="relative z-10">
-          <h1 className="text-3xl font-black text-white tracking-tight">Oportunidades y Cobertura</h1>
-          <p className="text-slate-400 mt-1 font-medium italic">Gestioná tus puestos vacantes y asigná profesionales.</p>
+          <h1 className="text-3xl font-black text-white tracking-tight">Publicar Nueva Oportunidad</h1>
+          <p className="text-slate-400 mt-1 font-medium italic">Publicá guardias, eventos o búsquedas laborales.</p>
         </div>
         <div className="relative z-10 flex flex-wrap gap-3">
           <button 
@@ -385,7 +388,7 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl font-black transition-all shadow-lg shadow-blue-900/40 hover:-translate-y-0.5 active:translate-y-0"
           >
             <PlusCircle className="w-5 h-5" />
-            Nueva Guardia
+            Nueva Oportunidad
           </button>
         </div>
       </div>
@@ -530,17 +533,18 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Unidad / Sede</label>
-                  <select name="locationId" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">Sede Principal (Default)</option>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Unidad / Sede de Trabajo</label>
+                  <select name="locationId" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    <option value="">-- Usar ubicación de perfil --</option>
                     {locations.map(loc => (
                       <option key={loc.id} value={loc.id}>{loc.name}</option>
                     ))}
                   </select>
+                  <p className="text-[10px] text-gray-500 mt-1 italic">Si es para una sede distinta a la principal, seleccionala acá.</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Servicio / Sector</label>
-                  <input type="text" name="serviceName" placeholder="Ej: Guardia Adultos, UTI 2" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Sector / Área</label>
+                  <input type="text" name="serviceName" placeholder="Ej: Adultos, UTI 2, Traslados" className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Especialidad / Rol requerido</label>
@@ -555,9 +559,9 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                     Apto a negociación (los postulantes pueden hacer ofertas)
                   </label>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                  <input type="date" name="date" required min={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <div className={selectedCategory === 'empleo' ? 'hidden' : 'block'}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Fecha de la Oportunidad</label>
+                  <input type="date" name="date" required={selectedCategory !== 'empleo'} min={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 font-bold">Zonas de Cobertura (Multizona)</label>
@@ -586,15 +590,15 @@ export default function ClinicDashboard({ user }: ClinicDashboardProps) {
                 </div>
               </div>
               
-              <div className="border-t border-gray-200 pt-4 mt-2 space-y-4">
+              <div className={cn("border-t border-gray-200 pt-4 mt-2 space-y-4", selectedCategory === 'empleo' ? 'hidden' : 'block')}>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
-                    <input type="time" name="startTime" required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Hora Inicio</label>
+                    <input type="time" name="startTime" required={selectedCategory !== 'empleo'} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
-                    <input type="time" name="endTime" required className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1 font-bold">Hora Fin</label>
+                    <input type="time" name="endTime" required={selectedCategory !== 'empleo'} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                 </div>
 

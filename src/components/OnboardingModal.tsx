@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
-import { ShieldCheck, ChevronRight, CheckCircle2, FileCheck2, Building2, Clock, Upload, Camera, ImageIcon, Phone, MapPin, Stethoscope, Plus, X, Award, Calendar, FileText } from 'lucide-react';
+import { ShieldCheck, ChevronRight, CheckCircle2, FileCheck2, Building2, Clock, Upload, Camera, ImageIcon, Phone, MapPin, Stethoscope, Plus, X, Award, Calendar, FileText, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 
@@ -46,7 +46,7 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
     no_cuit: user.cuit === 'N/A',
     address: '',
     institution_type: '',
-    zone: '',
+    zone: user.role === 'clinic' ? (user.jurisdiction || '') : '', // Use existing mapping
     needed_specialties: [] as string[],
     contact_hours: '',
     bio: '',
@@ -54,6 +54,7 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
     avatar: user.avatar || '',
     affidavit_accepted: false,
   });
+  const [specialtySearch, setSpecialtySearch] = useState('');
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -434,17 +435,16 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Zona Operativa</label>
-                        <select 
+                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Zona Operativa / Localidad</label>
+                        <input 
+                          type="text"
                           name="zone"
                           required
                           value={formData.zone}
-                          onChange={handleChange as any}
+                          onChange={handleChange}
+                          placeholder="Ej: GBA Sur, CABA, Rosario..."
                           className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none shadow-sm transition-all"
-                        >
-                          <option value="">Elegir zona...</option>
-                          {ZONES.map(z => <option key={z} value={z}>{z}</option>)}
-                        </select>
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Horario Administrativo</label>
@@ -462,7 +462,7 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Dirección Exacta</label>
+                      <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Dirección de Sede Principal (Opcional)</label>
                       <div className="relative">
                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Calle, Número, Localidad" className="w-full pl-12 pr-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-purple-500 focus:bg-white outline-none shadow-sm transition-all" />
@@ -478,10 +478,20 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
                     <h3 className="text-lg font-bold text-gray-900">Especialidades que más solicitás</h3>
                   </div>
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1 text-gray-500">Tocá las especialidades para seleccionarlas</label>
-                      <div className="flex flex-wrap gap-2">
-                        {SPECIALTIES.map(spec => {
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input 
+                          type="text" 
+                          placeholder="Buscar especialidad..." 
+                          value={specialtySearch}
+                          onChange={(e) => setSpecialtySearch(e.target.value)}
+                          className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none font-medium text-sm text-gray-900"
+                        />
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1">
+                        {SPECIALTIES.filter(s => s.toLowerCase().includes(specialtySearch.toLowerCase())).map(spec => {
                           const isSelected = formData.needed_specialties.includes(spec);
                           return (
                             <button
@@ -501,6 +511,20 @@ export default function OnboardingModal({ user, onComplete, onLogout }: Onboardi
                           );
                         })}
                       </div>
+                      
+                      {formData.needed_specialties.length > 0 && (
+                        <div className="pt-2 border-t border-gray-100 italic">
+                           <p className="text-[10px] font-black text-purple-600 uppercase mb-2">Seleccionadas:</p>
+                           <div className="flex flex-wrap gap-1.5">
+                              {formData.needed_specialties.map(s => (
+                                <span key={s} className="px-2 py-1 bg-purple-50 text-purple-600 rounded-lg text-[10px] font-bold border border-purple-100 flex items-center gap-1">
+                                  {s}
+                                  <button onClick={() => toggleSpecialty(s)}><X className="w-2.5 h-2.5" /></button>
+                                </span>
+                              ))}
+                           </div>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Resumen / Propuesta de Valor</label>

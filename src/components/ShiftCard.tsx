@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale';
 import { 
   MapPin, Calendar, Clock, DollarSign, CheckCircle2, ChevronRight, 
   UserCircle, ExternalLink, Star, MessageSquare, XCircle, BriefcaseMedical,
-  ShieldAlert, Wallet
+  ShieldAlert, Wallet, Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -211,14 +211,23 @@ export default function ShiftCard({
               {shift.description}
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-400" />
-            <span className="capitalize">{format(new Date(shift.date), "EEEE d 'de' MMMM", { locale: es })}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-gray-400" />
-            <span>{shift.start_time} - {shift.end_time} ({shift.type})</span>
-          </div>
+          {shift.category !== 'empleo' ? (
+            <>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span className="capitalize">{format(new Date(shift.date), "EEEE d 'de' MMMM", { locale: es })}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-400" />
+                <span>{shift.start_time} - {shift.end_time} ({shift.type})</span>
+              </div>
+            </>
+          ) : (
+            <div className="bg-green-50 p-3 rounded-lg border border-green-100 flex items-center gap-2 text-green-900 font-bold">
+              <Activity className="w-4 h-4" />
+              <span>Búsqueda laboral activa / Puesto fijo</span>
+            </div>
+          )}
           <div className="flex items-start gap-2">
             <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
             <div className="flex flex-col">
